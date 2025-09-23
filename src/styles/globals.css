@@ -3,6 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap");
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -15,12 +16,15 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Dark mode disabled - commenting out to prevent iOS Safari dark mode issues */
+/*
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
 }
+*/
 
 body {
   background: var(--background);
