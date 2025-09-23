@@ -2,37 +2,27 @@
 import { withAuth } from "next-auth/middleware"
 
 export default withAuth(
-  // `withAuth` augments your `Request` with the user's token.
   function middleware(req) {
-    console.log("Middleware: User token exists:", !!req.nextauth.token)
-    console.log("Middleware: Accessing:", req.nextUrl.pathname)
+    // This function runs for protected routes
+    console.log("Protected route accessed:", req.nextUrl.pathname)
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
-        // Return true if user has a valid token, false otherwise
-        const isAuthorized = !!token
-        console.log("Authorization check:", {
-          path: req.nextUrl.pathname,
-          hasToken: !!token,
-          authorized: isAuthorized
-        })
-        return isAuthorized
+      authorized: ({ token }) => {
+        // Simply return true if token exists, false otherwise
+        return !!token
       },
-    },
-    pages: {
-      signIn: '/', // Redirect to home page instead of default NextAuth sign-in page
     },
   }
 )
 
-// Apply middleware to these routes
+// Only apply to these specific routes
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/deadlines/:path*', 
-    '/analytics/:path*',
-    '/chat/:path*',
-    '/profile/:path*'
+    "/dashboard",
+    "/deadlines", 
+    "/analytics",
+    "/chat",
+    "/profile"
   ]
 }
