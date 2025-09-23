@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { User, LogOut, Settings, Menu, X } from 'lucide-react';
 import AuthModalController, { useAuthModal } from './AuthModalController';
+import SettingsModal from './SettingsModal';
 
 interface HeaderProps {
   currentPath: string;
@@ -20,7 +21,8 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
   const { data: session, status } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
   // Use the new auth modal system
   const authModal = useAuthModal();
 
@@ -260,7 +262,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                       <button
                         onClick={() => {
                           setIsUserMenuOpen(false);
-                          handleLinkClick('/profile');
+                          setIsSettingsModalOpen(true);
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                       >
@@ -352,7 +354,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                     <button
                       onClick={() => {
                         setIsMobileMenuOpen(false);
-                        handleLinkClick('/profile');
+                        setIsSettingsModalOpen(true);
                       }}
                       className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-3 transition-colors"
                     >
@@ -403,6 +405,11 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
           onClick={() => setIsUserMenuOpen(false)}
         />
       )}
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
 
       {/* Enhanced Auth Modal System */}
       <AuthModalController
