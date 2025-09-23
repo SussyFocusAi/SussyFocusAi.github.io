@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Eye, EyeOff, Mail, Lock, User, Chrome, Github, CheckCircle } from 'lucide-react';
 import { signIn } from 'next-auth/react';
-import Button from './Button';
 
 interface SignUpModalProps {
   isOpen: boolean;
@@ -354,7 +353,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
           </div>
 
           {/* Sign Up Button */}
-          <Button
+          <button
             type="submit"
             disabled={isLoading}
             className="w-full justify-center py-3 lg:py-4"
@@ -367,7 +366,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
             ) : (
               'Create Account'
             )}
-          </Button>
+          </button>
 
           {/* Divider */}
           <div className="relative my-6">
