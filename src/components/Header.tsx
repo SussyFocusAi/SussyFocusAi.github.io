@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { User, LogOut, Settings, Menu, X } from 'lucide-react';
 import AuthModalController, { useAuthModal } from './AuthModalController';
-import SettingsModal from './SettingsModal';
+import SettingsModal from './SettingModal';
 
 interface HeaderProps {
   currentPath: string;
