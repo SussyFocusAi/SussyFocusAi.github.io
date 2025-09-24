@@ -118,40 +118,55 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
+  e.preventDefault();
 
-    setIsLoading(true);
-    setErrors({});
-    
-    try {
-      // Simulate account creation API call
-      console.log('Creating account with:', {
+  if (!validateForm()) return;
+
+  setIsLoading(true);
+  setErrors({});
+
+  try {
+    // Call your signup API
+    const res = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name: formData.name,
         email: formData.email,
-        // Don't log password in real app
-      });
+        password: formData.password,
+      }),
+    });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    const data = await res.json();
 
-      // In a real app, you'd create the account first, then sign them in
-      // For demo, we'll just simulate successful signup
-      
+    if (!res.ok) {
+      setErrors({ general: data.error || 'Sign-up failed' });
+      setIsLoading(false);
+      return;
+    }
+
+    // Automatically sign in the user after signup
+    const result = await signIn('credentials', {
+      email: formData.email,
+      password: formData.password,
+      redirect: false,
+    });
+
+    if (result?.ok) {
       onClose();
       onSignUpSuccess?.();
-      
-      // Show success message
-      alert(`Welcome to FocusAI, ${formData.name}! Your account has been created successfully! 🎉\n\nFor demo: You can now sign in with:\nEmail: ${formData.email}\nPassword: ${formData.password}`);
-      
-    } catch (error) {
-      console.error('Sign up error:', error);
-      setErrors({ general: 'Something went wrong. Please try again.' });
-    } finally {
-      setIsLoading(false);
+    } else {
+      setErrors({ general: 'Sign-in after sign-up failed' });
     }
-  };
+
+  } catch (error) {
+    console.error('Sign up error:', error);
+    setErrors({ general: 'Something went wrong. Please try again.' });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleSocialSignUp = async (provider: 'google' | 'github') => {
     try {
