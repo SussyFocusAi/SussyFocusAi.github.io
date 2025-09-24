@@ -3,6 +3,7 @@ import '../styles/globals.css';
 import type { AppProps } from 'next/app';
 import { SessionProvider } from 'next-auth/react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next"
 export default function MyApp({ 
   Component, 
   pageProps: { session, ...pageProps } 
@@ -10,6 +11,7 @@ export default function MyApp({
   return (
     <SessionProvider session={session}>
       <SpeedInsights />
+      <Analytics />
       <Component {...pageProps} />
     </SessionProvider>
   );
