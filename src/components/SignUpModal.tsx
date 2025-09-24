@@ -117,16 +117,15 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
-
+  
   if (!validateForm()) return;
 
   setIsLoading(true);
   setErrors({});
 
   try {
-    // Call your signup API
     const res = await fetch('/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -140,25 +139,24 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
     const data = await res.json();
 
     if (!res.ok) {
-      setErrors({ general: data.error || 'Sign-up failed' });
-      setIsLoading(false);
+      setErrors({ general: data.error || 'Signup failed' });
       return;
     }
 
-    // Automatically sign in the user after signup
-    const result = await signIn('credentials', {
+    // Automatically sign in after successful signup
+    const signInResult = await signIn('credentials', {
       email: formData.email,
       password: formData.password,
       redirect: false,
     });
 
-    if (result?.ok) {
+    if (signInResult?.error) {
+      setErrors({ general: 'Login after signup failed' });
+    } else {
       onClose();
       onSignUpSuccess?.();
-    } else {
-      setErrors({ general: 'Sign-in after sign-up failed' });
+      alert(`Welcome to FocusAI, ${formData.name}! Your account has been created and you're now signed in.`);
     }
-
   } catch (error) {
     console.error('Sign up error:', error);
     setErrors({ general: 'Something went wrong. Please try again.' });
@@ -166,6 +164,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
     setIsLoading(false);
   }
 };
+
 
 
   const handleSocialSignUp = async (provider: 'google' | 'github') => {
