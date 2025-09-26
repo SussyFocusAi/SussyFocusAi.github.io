@@ -117,7 +117,9 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
     return Object.keys(newErrors).length === 0;
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
+ // Just update the handleSubmit function in your SignUpModal.tsx:
+
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
   if (!validateForm()) return;
@@ -126,7 +128,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
   setErrors({});
 
   try {
-    const res = await fetch('/api/signup', {
+    const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -139,24 +141,16 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
     const data = await res.json();
 
     if (!res.ok) {
-      setErrors({ general: data.error || 'Signup failed' });
+      setErrors({ general: data.message || 'Signup failed' });
       return;
     }
 
-    // Automatically sign in after successful signup
-    const signInResult = await signIn('credentials', {
-      email: formData.email,
-      password: formData.password,
-      redirect: false,
-    });
-
-    if (signInResult?.error) {
-      setErrors({ general: 'Login after signup failed' });
-    } else {
-      onClose();
-      onSignUpSuccess?.();
-      alert(`Welcome to FocusAI, ${formData.name}! Your account has been created and you're now signed in.`);
-    }
+    // With Supabase, we can't auto sign in with credentials like before
+    // So we'll just show success and redirect to sign in
+    onClose();
+    alert(`Account created successfully! Please sign in with your new credentials.`);
+    onSwitchToSignIn?.(); // Switch to sign in modal
+    
   } catch (error) {
     console.error('Sign up error:', error);
     setErrors({ general: 'Something went wrong. Please try again.' });
@@ -164,8 +158,6 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
     setIsLoading(false);
   }
 };
-
-
 
   const handleSocialSignUp = async (provider: 'google' | 'github') => {
     try {
@@ -370,7 +362,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full justify-center py-3 lg:py-4"
+            className="w-full flex justify-center items-center py-3 lg:py-4 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             {isLoading ? (
               <div className="flex items-center gap-2">

@@ -1,18 +1,12 @@
 // pages/api/auth/[...nextauth].ts
-import NextAuth from 'next-auth'
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
-import { PrismaClient } from "@prisma/client"
+import NextAuth from "next-auth"
+import { SupabaseAdapter } from "@auth/supabase-adapter"
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
-import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 export default NextAuth({
-  adapter: PrismaAdapter(prisma),
   providers: [
-    // Email & Password Authentication with database
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -24,67 +18,35 @@ export default NextAuth({
           return null
         }
 
-        // For demo purposes, still allow demo@focusai.com
+        // Demo user (you can remove this later)
         if (credentials.email === 'demo@focusai.com' && credentials.password === 'demo123') {
-          // Check if demo user exists in database, if not create it
-          let user = await prisma.user.findUnique({
-            where: { email: 'demo@focusai.com' }
-          })
-
-          if (!user) {
-            user = await prisma.user.create({
-              data: {
-                email: 'demo@focusai.com',
-                name: 'Demo User',
-                emailVerified: new Date(),
-              }
-            })
-          }
-
           return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: user.image,
+            id: 'demo-user-id',
+            email: 'demo@focusai.com',
+            name: 'Demo User',
           }
         }
 
-        // Check against database for other users
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        })
-
-        if (!user) {
-          return null
-        }
-
-        // In production, you'd verify password hash here
-        // For now, we'll create a simple check
-        // You'll need to implement proper password hashing when users sign up
-        
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        }
+        // For now, we'll just reject other credentials since we're not storing passwords
+        // You'd typically validate against your user table here
+        return null
       }
     }),
-
-    // Google OAuth
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
-
-    // GitHub OAuth  
     GitHubProvider({
       clientId: process.env.GITHUB_CLIENT_ID || '',
       clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
     })
   ],
+  
+  adapter: SupabaseAdapter({
+    url: process.env.SUPABASE_URL!,
+    secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  }),
 
-  // Callbacks for customization
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -92,23 +54,30 @@ export default NextAuth({
       }
       return token
     },
+    
     async session({ session, token }) {
       if (session.user && token.id) {
         (session.user as any).id = token.id
       }
       return session
     },
+
+    async redirect({ url, baseUrl }) {
+      // After sign in, redirect to dashboard
+      if (url === baseUrl + '/api/auth/signin' || url === baseUrl + '/api/auth/callback/credentials') {
+        return baseUrl + '/dashboard'
+      }
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
+    }
   },
 
-  // Session settings
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
-  // Security
   secret: process.env.NEXTAUTH_SECRET,
-
-  // Enable debug in development
   debug: process.env.NODE_ENV === 'development',
 })
