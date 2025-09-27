@@ -139,7 +139,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     });
 
     const data = await res.json();
-
     if (!res.ok) {
       setErrors({ general: data.message || 'Signup failed' });
       return;

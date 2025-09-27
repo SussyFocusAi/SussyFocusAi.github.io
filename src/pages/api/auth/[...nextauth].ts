@@ -1,9 +1,15 @@
-// pages/api/auth/[...nextauth].ts
+// src/pages/api/auth/[...nextauth].ts
 import NextAuth from "next-auth"
 import { SupabaseAdapter } from "@auth/supabase-adapter"
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export default NextAuth({
   providers: [
@@ -18,18 +24,26 @@ export default NextAuth({
           return null
         }
 
-        // Demo user (you can remove this later)
-        if (credentials.email === 'demo@focusai.com' && credentials.password === 'demo123') {
-          return {
-            id: 'demo-user-id',
-            email: 'demo@focusai.com',
-            name: 'Demo User',
-          }
-        }
+        try {
+          // Authenticate with Supabase Auth
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: credentials.email,
+            password: credentials.password,
+          })
 
-        // For now, we'll just reject other credentials since we're not storing passwords
-        // You'd typically validate against your user table here
-        return null
+          if (error || !data.user) {
+            return null
+          }
+
+          return {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || data.user.email,
+          }
+        } catch (error) {
+          console.error('Auth error:', error)
+          return null
+        }
       }
     }),
     GoogleProvider({
@@ -63,7 +77,6 @@ export default NextAuth({
     },
 
     async redirect({ url, baseUrl }) {
-      // After sign in, redirect to dashboard
       if (url === baseUrl + '/api/auth/signin' || url === baseUrl + '/api/auth/callback/credentials') {
         return baseUrl + '/dashboard'
       }
@@ -75,7 +88,7 @@ export default NextAuth({
 
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   secret: process.env.NEXTAUTH_SECRET,
