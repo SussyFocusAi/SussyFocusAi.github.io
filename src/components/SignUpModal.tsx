@@ -128,7 +128,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   setErrors({});
 
   try {
-    const res = await fetch('/api/signup', {
+    const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
