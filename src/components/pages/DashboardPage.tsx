@@ -1,9 +1,14 @@
-// src/components/pages/DashboardPage.tsx
-import React, { useState } from 'react';
-import { Calendar, CheckCircle, Clock, TrendingUp, Plus, Target, Zap } from 'lucide-react';
+// src/pages/dashboard.tsx
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
+import { Calendar, CheckCircle, Clock, TrendingUp, Plus, Target, Zap, X } from 'lucide-react';
 import Button from '../Button';
 
-export default function DashboardPage() {
+export default function Dashboard() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [showWelcome, setShowWelcome] = useState(false);
   const [tasks] = useState([
     { id: 1, title: "Complete React Project", progress: 75, dueDate: "2025-01-15", priority: "high" },
     { id: 2, title: "Study for Finals", progress: 45, dueDate: "2025-01-20", priority: "high" },
@@ -18,6 +23,47 @@ export default function DashboardPage() {
     streak: 7
   });
 
+  // Check for welcome parameter and show welcome message
+  useEffect(() => {
+    if (router.query.welcome === 'true' && session) {
+      setShowWelcome(true);
+      // Clean up URL without causing a page reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('welcome');
+      window.history.replaceState({}, '', url.pathname);
+      
+      // Auto-hide welcome message after 5 seconds
+      const timer = setTimeout(() => {
+        setShowWelcome(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [router.query.welcome, session]);
+
+  // Redirect to signin if not authenticated
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/');
+    }
+  }, [session, status, router]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-600 border-red-200';
@@ -30,10 +76,41 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6">
       <div className="container mx-auto max-w-7xl">
+        {/* Welcome Banner */}
+        {showWelcome && (
+          <div className="mb-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="bg-white/20 p-3 rounded-full">
+                    <CheckCircle className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold mb-1">
+                      Welcome to FocusAI, {session.user?.name?.split(' ')[0] || 'there'}!
+                    </h2>
+                    <p className="text-white/90">Your account is ready. Let's start achieving your goals together.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowWelcome(false)}
+                  className="text-white/80 hover:text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-            Welcome back! <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Ready to focus?</span>
+            Welcome back, {session.user?.name?.split(' ')[0] || 'User'}! <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Ready to focus?</span>
           </h1>
           <p className="text-lg text-gray-600">Here's your productivity overview for today</p>
         </div>

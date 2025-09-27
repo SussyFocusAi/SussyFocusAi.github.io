@@ -103,7 +103,7 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
       });
 
       if (result?.error) {
-        setErrors({ general: 'Invalid email or password. Try demo@focusai.com / demo123' });
+        setErrors({ general: 'Invalid email or password' });
       } else if (result?.ok) {
         // Success! Get the updated session
         const session = await getSession();
@@ -112,8 +112,8 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
         onClose();
         onSignInSuccess?.();
         
-        // Show success message
-        alert(`Welcome back, ${session?.user?.name || 'User'}!`);
+        // Redirect to dashboard
+        window.location.href = '/dashboard';
       }
     } catch (error) {
       console.error('Sign in error:', error);
@@ -134,11 +134,11 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
         onClose();
         onSignInSuccess?.();
       } else if (result?.error) {
-        alert(`${provider} sign in failed. Make sure OAuth is configured in your .env.local file.`);
+        setErrors({ general: `${provider} sign in failed. Please check your OAuth configuration.` });
       }
     } catch (error) {
       console.error(`${provider} sign in error:`, error);
-      alert(`${provider} sign in failed. Please try again.`);
+      setErrors({ general: `${provider} sign in failed. Please try again.` });
     }
   };
 
@@ -266,9 +266,9 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
             className="w-full flex justify-center items-center py-3 lg:py-4 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
             {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                Signing in...
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                <span>Signing you in...</span>
               </div>
             ) : (
               'Sign In'

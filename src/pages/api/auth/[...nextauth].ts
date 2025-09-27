@@ -1,6 +1,5 @@
 // src/pages/api/auth/[...nextauth].ts
 import NextAuth from "next-auth"
-import { SupabaseAdapter } from "@auth/supabase-adapter"
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
@@ -21,27 +20,34 @@ export default NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          throw new Error('Email and password required')
         }
 
         try {
-          // Authenticate with Supabase Auth
+          // Try to sign in with Supabase Auth
           const { data, error } = await supabase.auth.signInWithPassword({
             email: credentials.email,
             password: credentials.password,
           })
 
-          if (error || !data.user) {
-            return null
+          if (error) {
+            console.error('Supabase sign in error:', error.message)
+            throw new Error('Invalid credentials')
           }
+
+          if (!data.user) {
+            throw new Error('No user found')
+          }
+
+          console.log('Successful auth:', data.user.id, data.user.email)
 
           return {
             id: data.user.id,
-            email: data.user.email,
-            name: data.user.user_metadata?.name || data.user.email,
+            email: data.user.email!,
+            name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
           }
         } catch (error) {
-          console.error('Auth error:', error)
+          console.error('Auth authorize error:', error)
           return null
         }
       }
@@ -55,11 +61,9 @@ export default NextAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
     })
   ],
-  
-  adapter: SupabaseAdapter({
-    url: process.env.SUPABASE_URL!,
-    secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  }),
+
+  // Don't use SupabaseAdapter for now - it conflicts with direct auth
+  // adapter: SupabaseAdapter({...}),
 
   callbacks: {
     async jwt({ token, user }) {
@@ -92,5 +96,5 @@ export default NextAuth({
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
+  debug: true, // Enable debug to see what's happening
 })
