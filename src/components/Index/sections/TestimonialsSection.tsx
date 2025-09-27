@@ -12,21 +12,21 @@ interface Testimonial {
 export default function TestimonialsSection() {
   const testimonials: Testimonial[] = [
     {
-      name: "Sarah M.",
-      role: "Graduate Student",
-      text: "FocusAI helped me finish my thesis 3 weeks early. The breakdown feature is incredible!",
+      name: "John D",
+      role: "Input",
+      text: "Input",
       rating: 5
     },
     {
-      name: "Marcus J.",
-      role: "Software Engineer",
-      text: "I went from missing deadlines to being the most productive person on my team.",
+      name: "John D",
+      role: "Input",
+      text: "Input",
       rating: 5
     },
     {
-      name: "Elena R.",
-      role: "Marketing Manager",
-      text: "The reminders feel like having a personal coach. My procrastination is finally controlled.",
+      name: "John D",
+      role: "Input",
+      text: "Input",
       rating: 5
     }
   ];

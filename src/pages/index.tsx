@@ -4,11 +4,11 @@ import Header from "../components/Header";
 import { useRouter } from "../hooks/useRouter";
 
 // Import all page components
-import HomePage from "../components/pages/home";
-import ChatPage from "../components/pages/chat";
-import DashboardPage from "../components/pages/dashboard";
-import DeadlinesPage from "../components/pages/deadlines";
-import AnalyticsPage from "../components/pages/analytics";
+import HomePage from "../components/pages/HomePage";
+import ChatPage from "../components/pages/ChatPage";
+import DashboardPage from "../components/pages/DashboardPage";
+import DeadlinesPage from "../components/pages/DeadlinesPage";
+import AnalyticsPage from "../components/pages/AnayticsPage";
 
 export default function App() {
   const { currentPath, navigate } = useRouter();

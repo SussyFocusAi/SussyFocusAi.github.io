@@ -13,9 +13,9 @@ interface TeamSectionProps {
 
 export default function TeamSection({ teamRef }: TeamSectionProps) {
   const team: TeamMember[] = [
-    { name: "Raymond", role: "Co-Owner", description: "sigma ohio boy" },
-    { name: "Patrick", role: "Co-Owner", description: "surpias" },
-    { name: "Denis", role: "man idk", description: "sdiybt" },
+    { name: "Raymond", role: "Owner", description: "." },
+    { name: "Patrick", role: "Owner", description: "." },
+    { name: "Denis", role: ".", description: "." },
   ];
 
   return (
