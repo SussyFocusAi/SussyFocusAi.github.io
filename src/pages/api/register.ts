@@ -31,7 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      user_metadata: { name }
+      user_metadata: { name },
+      email_confirm: true 
     })
 
     if (authError) {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 
 // Import all the section components
 import HeroSection from "../Index/sections/HeroSection";
+import VideoSection from "../Index/sections/VideoSection";
 import StatsSection from "../Index/sections/StatsSection";
 import FeaturesSection from "../Index/sections/FeaturesSection";
 import TestimonialsSection from "../Index/sections/TestimonialsSection";
@@ -12,11 +13,13 @@ import PricingSection from "../Index/sections/PricingSection";
 import CTASection from "../Index/sections/CTASection";
 import Footer from "../Index/Footer";
 
+
 interface HomePageProps {
   heroRef: React.RefObject<HTMLDivElement>;
   featuresRef: React.RefObject<HTMLDivElement>;
   teamRef: React.RefObject<HTMLDivElement>;
   pricingRef: React.RefObject<HTMLDivElement>;
+  onScrollToSection: (section: string) => void;  // Add this
 }
 
 export default function HomePage({ heroRef, featuresRef, teamRef, pricingRef }: HomePageProps) {
@@ -37,6 +40,7 @@ export default function HomePage({ heroRef, featuresRef, teamRef, pricingRef }: 
   return (
     <main className="min-h-screen font-sans overflow-x-hidden">
       <HeroSection heroRef={heroRef} isVisible={isVisible} />
+      <VideoSection />
       <StatsSection currentStat={currentStat} />
       <FeaturesSection featuresRef={featuresRef} />
       <TestimonialsSection />

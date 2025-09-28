@@ -1,5 +1,6 @@
-// src/components/Header.tsx - Updated with Enhanced Auth Modals
+// src/components/Header.tsx - Fixed with Next.js Router
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useSession, signOut } from 'next-auth/react';
 import { User, LogOut, Settings, Menu, X } from 'lucide-react';
 import AuthModalController, { useAuthModal } from './AuthModalController';
@@ -18,6 +19,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSection, refs }) => {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -29,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
   const handleNavClick = (section: keyof NonNullable<typeof refs>) => {
     setIsMobileMenuOpen(false); // Close mobile menu
     if (currentPath !== '/') {
-      onNavigate('/');
+      router.push('/');
       setTimeout(() => {
         if (scrollToSection && refs && refs[section]) {
           scrollToSection(refs[section]);
@@ -44,30 +46,24 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
 
   const handleLogoClick = () => {
     setIsMobileMenuOpen(false);
-    if (currentPath !== '/') {
-      onNavigate('/');
-    } else if (scrollToSection && refs?.heroRef) {
-      setTimeout(() => {
-        scrollToSection(refs.heroRef);
-      }, 100);
-    }
+    router.push('/');
   };
 
   const handleLinkClick = (path: string) => {
-    setIsMobileMenuOpen(false); // Close mobile menu
-    onNavigate(path);
+    setIsMobileMenuOpen(false);
+    router.push(path);
   };
 
   const handleSignOut = async () => {
     await signOut({ redirect: false });
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
-    onNavigate('/');
+    router.push('/');
   };
 
   const handleAuthSuccess = () => {
     console.log('User authenticated successfully!');
-    handleLinkClick('/dashboard');
+    router.push('/dashboard');
   };
 
   // Close mobile menu when clicking outside
@@ -208,13 +204,16 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
               className="hover:scale-105 transition-transform duration-200"
             >
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">F</span>
-                </div>
+                <img
+                  src="/icon.png"              
+                  alt="FocusAI logo"
+                  className="w-8 h-8 rounded-lg object-cover"
+                />
                 <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                   FocusAI
                 </span>
               </div>
+
             </button>
             
             {/* Desktop Navigation */}
