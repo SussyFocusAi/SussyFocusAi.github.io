@@ -1,8 +1,8 @@
-// src/components/Header.tsx - Fixed with Next.js Router
+// src/components/Header.tsx - Improved with consistent sizing and better mobile UX
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from 'next-auth/react';
-import { User, LogOut, Settings, Menu, X } from 'lucide-react';
+import { User, LogOut, Settings, Menu, X, Home } from 'lucide-react';
 import AuthModalController, { useAuthModal } from './AuthModalController';
 import SettingsModal from './SettingModal';
 
@@ -66,19 +66,28 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
     router.push('/dashboard');
   };
 
-  // Close mobile menu when clicking outside
+  // Close mobile menu when clicking outside or pressing escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMobileMenuOpen && event.target instanceof Element) {
         const mobileMenu = document.getElementById('mobile-menu');
-        if (mobileMenu && !mobileMenu.contains(event.target)) {
+        const menuButton = document.getElementById('mobile-menu-button');
+        if (mobileMenu && !mobileMenu.contains(event.target) && 
+            menuButton && !menuButton.contains(event.target)) {
           setIsMobileMenuOpen(false);
         }
       }
     };
 
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
     if (isMobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscapeKey);
       document.body.style.overflow = 'hidden'; // Prevent background scroll
     } else {
       document.body.style.overflow = 'unset';
@@ -86,6 +95,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
       document.body.style.overflow = 'unset';
     };
   }, [isMobileMenuOpen]);
@@ -195,29 +205,29 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
 
   return (
     <>
+      {/* Larger header height and padding to match dashboard */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-40">
-        <div className="container mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between h-14"> {/* Increased height for consistency */}
+            {/* Logo - consistent sizing */}
             <button 
               onClick={handleLogoClick}
-              className="hover:scale-105 transition-transform duration-200"
+              className="hover:scale-105 transition-transform duration-200 flex items-center"
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <img
                   src="/icon.png"              
                   alt="FocusAI logo"
-                  className="w-8 h-8 rounded-lg object-cover"
+                  className="w-12 h-12 rounded-lg object-cover shadow-sm" // Larger logo to match dashboard
                 />
-                <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <span className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                   FocusAI
                 </span>
               </div>
-
             </button>
             
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-6 lg:space-x-8">
+            <nav className="hidden md:flex space-x-8">
               {navigationItems.map((item, index) => renderNavItem(item, index, false))}
             </nav>
             
@@ -232,20 +242,20 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     {session.user?.image ? (
                       <img 
                         src={session.user.image} 
                         alt={session.user?.name || 'User'} 
-                        className="w-8 h-8 rounded-full"
+                        className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-white" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-white" />
                       </div>
                     )}
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-semibold text-gray-700">
                       {session.user?.name?.split(' ')[0] || session.user?.email?.split('@')[0] || 'User'}
                     </span>
                   </button>
@@ -283,13 +293,13 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                 <>
                   <button 
                     onClick={authModal.openSignIn}
-                    className="px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-600 hover:text-purple-600 transition-all duration-200 hover:scale-105"
+                    className="px-5 py-2.5 text-base font-medium text-gray-600 hover:text-purple-600 transition-all duration-200 hover:scale-105"
                   >
                     Sign In
                   </button>
                   <button 
                     onClick={authModal.openSignUp}
-                    className="px-4 sm:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base"
+                    className="px-7 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 text-base font-medium"
                   >
                     Get Started
                   </button>
@@ -299,26 +309,60 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
 
             {/* Mobile Menu Button */}
             <button 
+              id="mobile-menu-button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors z-50 relative"
+              aria-label="Toggle mobile menu"
             >
               {isMobileMenuOpen ? (
-                <X className="w-5 h-5 text-gray-600" />
+                <X className="w-6 h-6 text-gray-600" />
               ) : (
-                <Menu className="w-5 h-5 text-gray-600" />
+                <Menu className="w-6 h-6 text-gray-600" />
               )}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
+      {/* Enhanced Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div 
           id="mobile-menu"
-          className="fixed inset-0 bg-white z-50 md:hidden pt-20"
+          className="fixed inset-0 bg-white z-50 md:hidden overflow-y-auto"
         >
-          <div className="px-6 py-6 space-y-4">
+          {/* Mobile Menu Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <img
+                src="/icon.png"              
+                alt="FocusAI logo"
+                className="w-8 h-8 rounded-lg object-cover"
+              />
+              <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                FocusAI
+              </span>
+            </div>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+              aria-label="Close menu"
+            >
+              <X className="w-6 h-6 text-gray-600" />
+            </button>
+          </div>
+
+          <div className="px-6 py-6 space-y-6">
+            {/* Quick Home Button for mobile */}
+            {currentPath !== '/' && (
+              <button
+                onClick={handleLogoClick}
+                className="flex items-center gap-3 w-full px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-all duration-200 rounded-lg font-medium"
+              >
+                <Home className="w-5 h-5" />
+                Go to Home
+              </button>
+            )}
+
             {/* Mobile Navigation */}
             <div className="space-y-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Navigation</h3>
@@ -330,21 +374,21 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
               {session ? (
                 <>
                   {/* User Info */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-purple-50 rounded-lg">
+                  <div className="flex items-center gap-4 px-4 py-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-100">
                     {session.user?.image ? (
                       <img 
                         src={session.user.image} 
                         alt={session.user?.name || 'User'} 
-                        className="w-10 h-10 rounded-full"
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-white" />
                       </div>
                     )}
-                    <div>
-                      <p className="font-medium text-gray-900">{session.user?.name || 'User'}</p>
-                      <p className="text-sm text-gray-500">{session.user?.email}</p>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">{session.user?.name || 'User'}</p>
+                      <p className="text-sm text-gray-600">{session.user?.email}</p>
                     </div>
                   </div>
                   
@@ -355,7 +399,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                         setIsMobileMenuOpen(false);
                         setIsSettingsModalOpen(true);
                       }}
-                      className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-3 transition-colors"
+                      className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-3 transition-colors font-medium"
                     >
                       <Settings className="w-5 h-5" />
                       Settings
@@ -363,7 +407,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                     
                     <button
                       onClick={handleSignOut}
-                      className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-3 transition-colors"
+                      className="w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-3 transition-colors font-medium"
                     >
                       <LogOut className="w-5 h-5" />
                       Sign Out
@@ -377,7 +421,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                       setIsMobileMenuOpen(false);
                       authModal.openSignIn();
                     }}
-                    className="w-full px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors"
+                    className="w-full px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors border border-gray-200"
                   >
                     Sign In
                   </button>
@@ -386,7 +430,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                       setIsMobileMenuOpen(false);
                       authModal.openSignUp();
                     }}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg font-medium"
+                    className="w-full px-4 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg font-medium text-center"
                   >
                     Get Started
                   </button>
@@ -404,6 +448,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
           onClick={() => setIsUserMenuOpen(false)}
         />
       )}
+      
       {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsModalOpen}
