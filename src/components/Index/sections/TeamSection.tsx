@@ -1,6 +1,6 @@
 // src/components/sections/TeamSection.tsx
 import React from 'react';
-import { Linkedin, Twitter, Github, Mail, ExternalLink } from 'lucide-react';
+import { Linkedin, Twitter, Github, Mail, ExternalLink, Instagram } from 'lucide-react';
 
 interface TeamMember {
   name: string;
@@ -13,6 +13,7 @@ interface TeamMember {
     github?: string;
     email?: string;
     website?: string;
+    instagram?: string;
   };
 }
 
@@ -28,7 +29,8 @@ export default function TeamSection({ teamRef }: TeamSectionProps) {
       description: "Leading the vision to transform productivity through AI-powered solutions. Passionate about helping people achieve their goals.",
       socials: {
         linkedin: "https://linkedin.com/in/raymond",
-        twitter: "https://twitter.com/raymond",
+        instagram: "https://www.instagram.com/sussy_bungus",
+        website: "https://sussybungus.github.io/",
         email: "raymond@focusai.com"
       }
     },
@@ -45,12 +47,7 @@ export default function TeamSection({ teamRef }: TeamSectionProps) {
     { 
       name: "Denis", 
       role: "Head of Product", 
-      description: "Designing intuitive experiences that make productivity effortless. Focused on user-centric design and innovation.",
-      socials: {
-        linkedin: "https://linkedin.com/in/denis",
-        twitter: "https://twitter.com/denis",
-        website: "https://denis.design"
-      }
+      description: "Designing intuitive experiences that make productivity effortless. Focused on user-centric design and innovation."
     },
   ];
 
@@ -66,6 +63,8 @@ export default function TeamSection({ teamRef }: TeamSectionProps) {
         return <Mail className="w-4 h-4" />;
       case 'website':
         return <ExternalLink className="w-4 h-4" />;
+      case 'instagram':
+        return <Instagram className="w-4 h-4" />;
       default:
         return null;
     }
@@ -90,6 +89,8 @@ export default function TeamSection({ teamRef }: TeamSectionProps) {
         return 'hover:bg-red-500 hover:text-white';
       case 'website':
         return 'hover:bg-purple-600 hover:text-white';
+      case 'instagram':
+        return 'hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:text-white';
       default:
         return 'hover:bg-gray-600 hover:text-white';
     }
@@ -153,21 +154,7 @@ export default function TeamSection({ teamRef }: TeamSectionProps) {
           ))}
         </div>
 
-        {/* Join Team CTA */}
-        <div className="mt-16 text-center">
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-white">
-            <h3 className="text-2xl font-bold mb-4">Want to Join Our Team?</h3>
-            <p className="text-lg mb-6 opacity-90">
-              We're always looking for talented individuals who share our passion for productivity and innovation.
-            </p>
-            <button 
-              onClick={() => window.open('mailto:careers@focusai.com', '_blank')}
-              className="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200 transform hover:scale-105"
-            >
-              View Open Positions
-            </button>
-          </div>
-        </div>
+        
       </div>
     </section>
   );

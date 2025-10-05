@@ -1,7 +1,8 @@
 // src/components/SignUpModal.tsx
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, Mail, Lock, User, Chrome, Github, CheckCircle } from 'lucide-react';
+import { X, Eye, EyeOff, Mail, Lock, User, Chrome, Github, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/router';
 
 interface SignUpModalProps {
   isOpen: boolean;
@@ -11,7 +12,14 @@ interface SignUpModalProps {
   isTransitioning?: boolean;
 }
 
+interface Toast {
+  type: 'success' | 'error' | 'info';
+  title: string;
+  message?: string;
+}
+
 export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignUpSuccess, isTransitioning = false }: SignUpModalProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,6 +31,17 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
+
+  // Auto-hide toast after 5 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Close modal on Escape key
   useEffect(() => {
@@ -47,8 +66,13 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
       setFormData({ name: '', email: '', password: '', confirmPassword: '', agreeToTerms: false });
       setErrors({});
       setIsLoading(false);
+      setToast(null);
     }
   }, [isOpen, isTransitioning]);
+
+  const showToast = (toastData: Toast) => {
+    setToast(toastData);
+  };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,7 +80,6 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
   };
 
   const validatePassword = (password: string) => {
-    // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
     return passwordRegex.test(password);
   };
@@ -68,7 +91,6 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
       [name]: type === 'checkbox' ? checked : value
     }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -80,35 +102,30 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
-    // Name validation
     if (!formData.name.trim()) {
       newErrors.name = 'Full name is required';
     } else if (formData.name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
     }
 
-    // Email validation
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!validateEmail(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Password validation
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (!validatePassword(formData.password)) {
       newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number';
     }
 
-    // Confirm password validation
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    // Terms validation
     if (!formData.agreeToTerms) {
       newErrors.agreeToTerms = 'You must agree to the Terms of Service';
     }
@@ -117,51 +134,100 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToSignIn, onSignU
     return Object.keys(newErrors).length === 0;
   };
 
- // Just update the handleSubmit function in your SignUpModal.tsx:
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (!validateForm()) return;
+    setIsLoading(true);
+    setErrors({});
+    setToast(null);
 
-  setIsLoading(true);
-  setErrors({});
+    try {
+      // Step 1: Create the account
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-  try {
-    const res = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: formData.name,
+      const data = await res.json();
+      
+      if (!res.ok) {
+        showToast({
+          type: 'error',
+          title: 'Signup Failed',
+          message: data.message || 'Unable to create account. Please try again.'
+        });
+        return;
+      }
+
+      // Step 2: Auto sign in with the credentials
+      showToast({
+        type: 'success',
+        title: 'Account Created!',
+        message: 'Signing you in...'
+      });
+
+      const signInResult = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
-      }),
-    });
+        redirect: false,
+      });
 
-    const data = await res.json();
-    if (!res.ok) {
-      setErrors({ general: data.message || 'Signup failed' });
-      return;
+      if (signInResult?.error) {
+        // Account created but auto-signin failed - redirect to signin
+        showToast({
+          type: 'info',
+          title: 'Account Created',
+          message: 'Please sign in with your new credentials.'
+        });
+        
+        setTimeout(() => {
+          onClose();
+          onSwitchToSignIn?.();
+        }, 2000);
+      } else if (signInResult?.ok) {
+        // Success! Both created and signed in
+        showToast({
+          type: 'success',
+          title: 'Welcome to FocusAI!',
+          message: 'Redirecting to your dashboard...'
+        });
+
+        setTimeout(() => {
+          onClose();
+          onSignUpSuccess?.();
+          router.push('/dashboard?welcome=true');
+        }, 1500);
+      }
+      
+    } catch (error) {
+      console.error('Sign up error:', error);
+      showToast({
+        type: 'error',
+        title: 'Connection Error',
+        message: 'Unable to reach server. Please check your connection.'
+      });
+    } finally {
+      setIsLoading(false);
     }
-
-    // With Supabase, we can't auto sign in with credentials like before
-    // So we'll just show success and redirect to sign in
-    onClose();
-    alert(`Account created successfully! Please sign in with your new credentials.`);
-    onSwitchToSignIn?.(); // Switch to sign in modal
-    
-  } catch (error) {
-    console.error('Sign up error:', error);
-    setErrors({ general: 'Something went wrong. Please try again.' });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleSocialSignUp = async (provider: 'google' | 'github') => {
     try {
+      showToast({
+        type: 'info',
+        title: 'Redirecting...',
+        message: `Opening ${provider} sign in...`
+      });
+
       const result = await signIn(provider, {
-        callbackUrl: window.location.origin + '/dashboard',
+        callbackUrl: window.location.origin + '/dashboard?welcome=true',
       });
       
       if (result?.ok) {
@@ -170,13 +236,41 @@ const handleSubmit = async (e: React.FormEvent) => {
       }
     } catch (error) {
       console.error(`${provider} sign up error:`, error);
-      alert(`${provider} sign up failed. Please try again.`);
+      showToast({
+        type: 'error',
+        title: `${provider} Sign Up Failed`,
+        message: 'Please try again or use email signup.'
+      });
     }
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
+    }
+  };
+
+  const getToastIcon = () => {
+    if (!toast) return null;
+    switch (toast.type) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'error':
+        return <XCircle className="w-5 h-5 text-red-600" />;
+      case 'info':
+        return <AlertCircle className="w-5 h-5 text-blue-600" />;
+    }
+  };
+
+  const getToastStyles = () => {
+    if (!toast) return '';
+    switch (toast.type) {
+      case 'success':
+        return 'bg-green-50 border-green-200 text-green-800';
+      case 'error':
+        return 'bg-red-50 border-red-200 text-red-800';
+      case 'info':
+        return 'bg-blue-50 border-blue-200 text-blue-800';
     }
   };
 
@@ -190,6 +284,31 @@ const handleSubmit = async (e: React.FormEvent) => {
       <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-[90vw] sm:max-w-md lg:max-w-lg xl:max-w-xl max-h-[95vh] overflow-y-auto transform transition-all duration-300 ${
         isTransitioning ? 'scale-95 opacity-75' : 'scale-100 opacity-100'
       }`}>
+        {/* Toast Notification */}
+        {toast && (
+          <div className="p-4 border-b">
+            <div className={`rounded-lg border p-4 ${getToastStyles()} animate-in slide-in-from-top duration-300`}>
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {getToastIcon()}
+                </div>
+                <div className="ml-3 flex-1">
+                  <h4 className="text-sm font-semibold">{toast.title}</h4>
+                  {toast.message && (
+                    <p className="text-xs mt-1 opacity-90">{toast.message}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setToast(null)}
+                  className="ml-4 inline-flex text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between p-6 lg:p-8 border-b border-gray-100">
           <div>
@@ -207,13 +326,6 @@ const handleSubmit = async (e: React.FormEvent) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 lg:p-8 space-y-5">
-          {/* General Error */}
-          {errors.general && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{errors.general}</p>
-            </div>
-          )}
-
           {/* Name Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -340,7 +452,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <button
                   type="button"
                   className="text-purple-600 hover:text-purple-700 font-medium underline"
-                  onClick={() => alert('Terms of Service would open here')}
+                  onClick={() => showToast({ type: 'info', title: 'Terms of Service', message: 'Terms of Service page would open here' })}
                 >
                   Terms of Service
                 </button>{' '}
@@ -348,7 +460,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <button
                   type="button"
                   className="text-purple-600 hover:text-purple-700 font-medium underline"
-                  onClick={() => alert('Privacy Policy would open here')}
+                  onClick={() => showToast({ type: 'info', title: 'Privacy Policy', message: 'Privacy Policy page would open here' })}
                 >
                   Privacy Policy
                 </button>

@@ -1,7 +1,8 @@
 // src/components/SignInModal.tsx
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, Mail, Lock, Chrome, Github } from 'lucide-react';
+import { X, Eye, EyeOff, Mail, Lock, Chrome, Github, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import { signIn, getSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -11,7 +12,14 @@ interface SignInModalProps {
   isTransitioning?: boolean;
 }
 
+interface Toast {
+  type: 'success' | 'error' | 'info';
+  title: string;
+  message?: string;
+}
+
 export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignInSuccess, isTransitioning = false }: SignInModalProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,6 +28,17 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
+
+  // Auto-hide toast after 5 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Close modal on Escape key
   useEffect(() => {
@@ -44,8 +63,13 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
       setFormData({ email: '', password: '', rememberMe: false });
       setErrors({});
       setIsLoading(false);
+      setToast(null);
     }
   }, [isOpen, isTransitioning]);
+
+  const showToast = (toastData: Toast) => {
+    setToast(toastData);
+  };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -94,6 +118,7 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
 
     setIsLoading(true);
     setErrors({});
+    setToast(null);
     
     try {
       const result = await signIn('credentials', {
@@ -103,21 +128,35 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
       });
 
       if (result?.error) {
-        setErrors({ general: 'Invalid email or password' });
+        showToast({
+          type: 'error',
+          title: 'Sign In Failed',
+          message: 'Invalid email or password. Please try again.'
+        });
       } else if (result?.ok) {
         // Success! Get the updated session
         const session = await getSession();
         console.log('Sign in successful:', session);
         
-        onClose();
-        onSignInSuccess?.();
-        
-        // Redirect to dashboard
-        window.location.href = '/dashboard';
+        showToast({
+          type: 'success',
+          title: 'Welcome back!',
+          message: 'Redirecting to your dashboard...'
+        });
+
+        setTimeout(() => {
+          onClose();
+          onSignInSuccess?.();
+          router.push('/dashboard');
+        }, 1000);
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      setErrors({ general: 'Something went wrong. Please try again.' });
+      showToast({
+        type: 'error',
+        title: 'Connection Error',
+        message: 'Unable to reach server. Please check your connection.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -125,6 +164,12 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {
+      showToast({
+        type: 'info',
+        title: 'Redirecting...',
+        message: `Opening ${provider} sign in...`
+      });
+
       const result = await signIn(provider, {
         callbackUrl: window.location.origin + '/dashboard',
         redirect: false,
@@ -134,17 +179,57 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
         onClose();
         onSignInSuccess?.();
       } else if (result?.error) {
-        setErrors({ general: `${provider} sign in failed. Please check your OAuth configuration.` });
+        showToast({
+          type: 'error',
+          title: `${provider} Sign In Failed`,
+          message: 'Please check your OAuth configuration or try again.'
+        });
       }
     } catch (error) {
       console.error(`${provider} sign in error:`, error);
-      setErrors({ general: `${provider} sign in failed. Please try again.` });
+      showToast({
+        type: 'error',
+        title: `${provider} Sign In Failed`,
+        message: 'Please try again or use email sign in.'
+      });
     }
+  };
+
+  const handleForgotPassword = () => {
+    showToast({
+      type: 'info',
+      title: 'Password Reset',
+      message: 'Password reset functionality coming soon! Check your email.'
+    });
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
+    }
+  };
+
+  const getToastIcon = () => {
+    if (!toast) return null;
+    switch (toast.type) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'error':
+        return <XCircle className="w-5 h-5 text-red-600" />;
+      case 'info':
+        return <AlertCircle className="w-5 h-5 text-blue-600" />;
+    }
+  };
+
+  const getToastStyles = () => {
+    if (!toast) return '';
+    switch (toast.type) {
+      case 'success':
+        return 'bg-green-50 border-green-200 text-green-800';
+      case 'error':
+        return 'bg-red-50 border-red-200 text-red-800';
+      case 'info':
+        return 'bg-blue-50 border-blue-200 text-blue-800';
     }
   };
 
@@ -158,6 +243,31 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
       <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-[90vw] sm:max-w-md lg:max-w-lg xl:max-w-xl max-h-[95vh] overflow-y-auto transform transition-all duration-300 ${
         isTransitioning ? 'scale-95 opacity-75' : 'scale-100 opacity-100'
       }`}>
+        {/* Toast Notification */}
+        {toast && (
+          <div className="p-4 border-b">
+            <div className={`rounded-lg border p-4 ${getToastStyles()} animate-in slide-in-from-top duration-300`}>
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {getToastIcon()}
+                </div>
+                <div className="ml-3 flex-1">
+                  <h4 className="text-sm font-semibold">{toast.title}</h4>
+                  {toast.message && (
+                    <p className="text-xs mt-1 opacity-90">{toast.message}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setToast(null)}
+                  className="ml-4 inline-flex text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between p-6 lg:p-8 border-b border-gray-100">
           <div>
@@ -182,13 +292,6 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 lg:p-8 space-y-5">
-          {/* General Error */}
-          {errors.general && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{errors.general}</p>
-            </div>
-          )}
-
           {/* Email Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -253,7 +356,7 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
             <button
               type="button"
               className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
-              onClick={() => alert('Forgot password functionality coming soon!')}
+              onClick={handleForgotPassword}
             >
               Forgot password?
             </button>

@@ -33,9 +33,13 @@ export default function MyApp({
       case "/dashboard": return "Dashboard - FocusAI";
       case "/deadlines": return "Deadlines - FocusAI";
       case "/analytics": return "Analytics - FocusAI";
+      case "/404": return "Page Not Found - FocusAI";
       default: return "FocusAI - Stop Procrastinating, Stay Focused";
     }
   };
+
+  // Pages that shouldn't show the header
+  const showHeader = router.pathname !== '/404';
 
   return (
     <SessionProvider session={session}>
@@ -47,12 +51,15 @@ export default function MyApp({
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <Header
-          currentPath={router.pathname}
-          onNavigate={navigate}
-          scrollToSection={scrollToSection}
-          refs={router.pathname === "/" ? { heroRef, featuresRef, teamRef, pricingRef } : undefined}
-        />
+        {/* Only show Header if NOT on 404 page */}
+        {showHeader && (
+          <Header
+            currentPath={router.pathname}
+            onNavigate={navigate}
+            scrollToSection={scrollToSection}
+            refs={router.pathname === "/" ? { heroRef, featuresRef, teamRef, pricingRef } : undefined}
+          />
+        )}
         
         <div className="transition-all duration-300 ease-in-out">
           {/* Pass refs to HomePage only */}
