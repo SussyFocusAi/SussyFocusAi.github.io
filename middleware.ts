@@ -1,28 +1,35 @@
-// middleware.ts (place this in your project root, same level as package.json)
+// middleware.ts (place this in your project root)
 import { withAuth } from "next-auth/middleware"
+import { NextResponse } from "next/server"
 
 export default withAuth(
   function middleware(req) {
-    // This function runs for protected routes
-    console.log("Protected route accessed:", req.nextUrl.pathname)
+    // This runs for authenticated users
+    console.log("Authenticated user accessing:", req.nextUrl.pathname)
+    return NextResponse.next()
   },
   {
     callbacks: {
-      authorized: ({ token }) => {
-        // Simply return true if token exists, false otherwise
-        return !!token
+      authorized: ({ token, req }) => {
+        // If no token, they're not authenticated
+        if (!token) {
+          return false
+        }
+        return true
       },
+    },
+    pages: {
+      signIn: "/", // Redirect to homepage (where your sign-in modal is)
     },
   }
 )
 
-// Only apply to these specific routes
 export const config = {
   matcher: [
-    "/dashboard",
-    "/deadlines", 
-    "/analytics",
-    "/chat",
-    "/profile"
+    "/dashboard/:path*",
+    "/deadlines/:path*", 
+    "/analytics/:path*",
+    "/chat/:path*",
+    "/profile/:path*"
   ]
 }

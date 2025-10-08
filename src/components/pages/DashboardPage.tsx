@@ -1,28 +1,32 @@
+// src/components/pages/Dashboard.tsx
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, Clock, TrendingUp, Plus, Target, Zap, X, Edit2, Trash2, Filter, Search, Award, BarChart3, Bell, Settings, ChevronDown, Star, Brain, Trophy, Flame } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, TrendingUp, Plus, Target, Zap, X, Edit2, Trash2, Search, BarChart3, Bell, Brain, Trophy, Flame } from 'lucide-react';
+import { useAppContext } from '../../context/AppContext';
 
 export default function Dashboard() {
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [tasks, setTasks] = useState([
-    { id: 1, title: "Complete React Project", progress: 75, dueDate: "2025-01-15", priority: "high", completed: false, category: "work", subtasks: ["Setup project", "Build components", "Testing"], timeEstimate: 180 },
-    { id: 2, title: "Study for Finals", progress: 45, dueDate: "2025-01-20", priority: "high", completed: false, category: "education", subtasks: ["Review notes", "Practice problems"], timeEstimate: 240 },
-    { id: 3, title: "Write Blog Post", progress: 20, dueDate: "2025-01-18", priority: "medium", completed: false, category: "personal", subtasks: ["Outline", "Draft", "Edit"], timeEstimate: 120 },
-    { id: 4, title: "Plan Weekend Trip", progress: 90, dueDate: "2025-01-12", priority: "low", completed: false, category: "personal", subtasks: ["Book hotel", "Plan itinerary"], timeEstimate: 60 }
-  ]);
+  const { 
+    tasks, 
+    addTask: contextAddTask, 
+    updateTask: contextUpdateTask, 
+    deleteTask: contextDeleteTask, 
+    toggleComplete: contextToggleComplete,
+    updateProgress: contextUpdateProgress 
+  } = useAppContext();
 
+  const [showWelcome, setShowWelcome] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
+  const [editingTask, setEditingTask] = useState<any>(null);
   const [filterPriority, setFilterPriority] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [focusTime, setFocusTime] = useState(185);
   const [isFocusing, setIsFocusing] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [activeView, setActiveView] = useState('board'); // board, list, calendar
+  const [activeView, setActiveView] = useState('board');
   const [pomodoroMinutes, setPomodoroMinutes] = useState(25);
   const [pomodoroSeconds, setPomodoroSeconds] = useState(0);
-  const [achievements, setAchievements] = useState([
+  const [achievements] = useState([
     { id: 1, title: "First Task", description: "Complete your first task", unlocked: true, icon: "🎯" },
     { id: 2, title: "Early Bird", description: "Complete 5 tasks before noon", unlocked: false, icon: "🌅" },
     { id: 3, title: "Streak Master", description: "Maintain a 7-day streak", unlocked: true, icon: "🔥" },
@@ -51,7 +55,7 @@ export default function Dashboard() {
     dueDate: '',
     priority: 'medium',
     category: 'work',
-    subtasks: [],
+    subtasks: [] as string[],
     timeEstimate: 60
   });
 
@@ -59,7 +63,6 @@ export default function Dashboard() {
 
   const userName = "siigma";
 
-  // Calculate stats
   const completedTasks = tasks.filter(t => t.completed);
   const stats = {
     completedToday: completedTasks.length,
@@ -70,9 +73,8 @@ export default function Dashboard() {
     totalPoints: completedTasks.length * 10 + Math.floor(focusTime / 25) * 5
   };
 
-  // Pomodoro timer
   useEffect(() => {
-    let interval;
+    let interval: NodeJS.Timeout;
     if (isFocusing) {
       interval = setInterval(() => {
         if (pomodoroSeconds === 0) {
@@ -96,19 +98,17 @@ export default function Dashboard() {
   const addTask = () => {
     if (!newTask.title.trim()) return;
     
-    const task = {
-      id: Date.now(),
+    contextAddTask({
       title: newTask.title,
       progress: 0,
       dueDate: newTask.dueDate,
-      priority: newTask.priority,
+      priority: newTask.priority as 'high' | 'medium' | 'low',
       category: newTask.category,
       completed: false,
       subtasks: newTask.subtasks,
       timeEstimate: newTask.timeEstimate
-    };
+    });
     
-    setTasks([...tasks, task]);
     setNewTask({ title: '', dueDate: '', priority: 'medium', category: 'work', subtasks: [], timeEstimate: 60 });
     setShowAddModal(false);
   };
@@ -120,32 +120,27 @@ export default function Dashboard() {
     }
   };
 
-  const removeSubtask = (index) => {
+  const removeSubtask = (index: number) => {
     setNewTask({ ...newTask, subtasks: newTask.subtasks.filter((_, i) => i !== index) });
   };
 
   const updateTask = () => {
     if (!editingTask) return;
-    
-    setTasks(tasks.map(t => t.id === editingTask.id ? editingTask : t));
+    contextUpdateTask(editingTask.id, editingTask);
     setEditingTask(null);
     setShowEditModal(false);
   };
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter(t => t.id !== id));
+  const deleteTask = (id: number) => {
+    contextDeleteTask(id);
   };
 
-  const toggleComplete = (id) => {
-    setTasks(tasks.map(t => 
-      t.id === id ? { ...t, completed: !t.completed, progress: !t.completed ? 100 : t.progress } : t
-    ));
+  const toggleComplete = (id: number) => {
+    contextToggleComplete(id);
   };
 
-  const updateProgress = (id, progress) => {
-    setTasks(tasks.map(t => 
-      t.id === id ? { ...t, progress: Math.min(100, Math.max(0, progress)) } : t
-    ));
+  const updateProgress = (id: number, progress: number) => {
+    contextUpdateProgress(id, progress);
   };
 
   const startFocusSession = () => {
@@ -166,7 +161,7 @@ export default function Dashboard() {
     return matchesPriority && matchesSearch && !task.completed;
   });
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-600 border-red-200';
       case 'medium': return 'bg-yellow-100 text-yellow-600 border-yellow-200';
@@ -175,7 +170,7 @@ export default function Dashboard() {
     }
   };
 
-  const getNotificationColor = (type) => {
+  const getNotificationColor = (type: string) => {
     switch (type) {
       case 'warning': return 'bg-yellow-50 border-yellow-200';
       case 'success': return 'bg-green-50 border-green-200';
@@ -184,7 +179,7 @@ export default function Dashboard() {
     }
   };
 
-  const Modal = ({ show, onClose, title, children }) => {
+  const Modal = ({ show, onClose, title, children }: any) => {
     if (!show) return null;
     
     return (
@@ -201,7 +196,6 @@ export default function Dashboard() {
       </div>
     );
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 pt-8 pb-12 px-4 sm:px-6">
       <div className="container mx-auto max-w-7xl">
