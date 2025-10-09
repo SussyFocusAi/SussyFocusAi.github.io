@@ -269,17 +269,24 @@ export default function PricingSection({ pricingRef }: PricingSectionProps) {
 
       {/* Comparison Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-purple-200 animate-in zoom-in-95 duration-300">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Plan Comparison</h2>
-                <p className="text-sm text-gray-600 mt-1">Compare all features across plans</p>
+            <div className="relative flex items-center justify-between p-6 sm:p-8 border-b border-purple-100 bg-gradient-to-br from-purple-100 via-blue-50 to-pink-50 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10"></div>
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-purple-600 mb-2 shadow-sm">
+                  <Sparkles className="w-3 h-3" />
+                  Complete Feature Breakdown
+                </div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  Plan Comparison
+                </h2>
+                <p className="text-sm text-gray-600 mt-2">Find the perfect plan for your needs</p>
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors hover:bg-gray-100 rounded-lg p-2"
+                className="relative z-10 text-gray-400 hover:text-gray-700 transition-all hover:bg-white/80 backdrop-blur-sm rounded-xl p-2 hover:rotate-90 duration-300"
               >
                 <X size={24} />
               </button>
