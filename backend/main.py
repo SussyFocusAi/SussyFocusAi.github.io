@@ -1,256 +1,123 @@
-import gradio as gr
-from transformers import (
-    AutoModelForCausalLM, AutoTokenizer,
-    BlipProcessor, BlipForConditionalGeneration,
-    WhisperProcessor, WhisperForConditionalGeneration,
-)
-import torch
-from PIL import Image
-import pandas as pd
-import fitz  # PyMuPDF
+# backend/main.py
+# Simple Python backend using FastAPI + Ollama (free local AI)
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
+import httpx
 import os
-import json
-import faiss
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
 
-# --- Load larger Mixtral or compatible model ---
-# Note: Use a valid model checkpoint that exists on HuggingFace
-model_name = "mistralai/Mixtral-8x7B-Instruct-v0.1"  # Fixed model name
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    torch_dtype=torch.float16,
-    device_map="auto"
+app = FastAPI()
+
+# Enable CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-model.eval()
 
-# --- Load BLIP2 for better image captioning ---
-blip_processor = BlipProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
-blip_model = BlipForConditionalGeneration.from_pretrained(
-    "Salesforce/blip2-opt-2.7b",
-    torch_dtype=torch.float16,
-    device_map="auto"
-)
-blip_model.eval()
+class Message(BaseModel):
+    user: str
+    ai: str
 
-# --- Load Whisper large for voice input ---
-whisper_processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2")
-whisper_model = WhisperForConditionalGeneration.from_pretrained(
-    "openai/whisper-large-v2",
-    torch_dtype=torch.float16,
-    device_map="auto"
-)
-whisper_model.eval()
+class ChatRequest(BaseModel):
+    message: str
+    history: List[Message] = []
+    image: Optional[str] = None
 
+class ChatResponse(BaseModel):
+    response: str
+    success: bool
 
-# --- Document storage and retrieval setup ---
-class DocumentStore:
-    def __init__(self):
-        self.documents = []
-        self.embeddings = []
-        self.index = None
-        self.vectorizer = None
-
-    def embed_texts(self, texts):
-        # Simple TF-IDF embeddings (replace with proper sentence embeddings for better results)
-        vectorizer = TfidfVectorizer(stop_words='english', max_features=512)
-        return vectorizer.fit_transform(texts).toarray(), vectorizer
-
-    def add_documents(self, docs):
-        self.documents.extend(docs)
-        emb, self.vectorizer = self.embed_texts(self.documents)
-        emb = np.array(emb).astype('float32')
-        dim = emb.shape[1]
-
-        self.index = faiss.IndexFlatL2(dim)
-        self.index.add(emb)
-        self.embeddings = emb
-
-    def query(self, query_text, top_k=3):
-        if not self.vectorizer or not self.index:
-            return []
-        q_emb = self.vectorizer.transform([query_text]).toarray().astype('float32')
-        D, I = self.index.search(q_emb, min(top_k, len(self.documents)))
-        return [self.documents[i] for i in I[0] if i < len(self.documents)]
-
-
-doc_store = DocumentStore()
-
-
-# --- Utility: read files ---
-def read_file(file):
-    if file is None:
-        return ""
-    ext = os.path.splitext(file.name)[1].lower()
+# Option 1: Call Ollama (free local model)
+async def call_ollama(message: str, history: List[Message]) -> Optional[str]:
     try:
-        if ext == ".txt":
-            with open(file.name, 'r', encoding='utf-8') as f:
-                return f.read()
-        elif ext == ".pdf":
-            doc = fitz.open(file.name)
-            return "\n".join(page.get_text() for page in doc)
-        elif ext == ".csv":
-            df = pd.read_csv(file.name)
-            return df.head(20).to_string()
-        else:
-            return ""
-    except Exception as e:
-        return f"Error reading file: {str(e)}"
+        # Build conversation context
+        context = "\n".join([f"User: {h.user}\nAI: {h.ai}" for h in history[-5:]])
+        full_prompt = f"""You are a helpful AI productivity coach. Help users with task management, scheduling, focus, and motivation.
 
+Previous conversation:
+{context}
 
-# --- Improved image captioning ---
-def describe_image(image):
-    try:
-        image = image.convert("RGB")
-        inputs = blip_processor(images=image, return_tensors="pt")
-        inputs = {k: v.to(model.device) for k, v in inputs.items()}
-        with torch.no_grad():
-            outputs = blip_model.generate(**inputs, max_length=50)
-        caption = blip_processor.decode(outputs[0], skip_special_tokens=True)
-        return caption
-    except Exception as e:
-        return f"Error describing image: {str(e)}"
+User: {message}
+AI:"""
 
-
-# --- Voice transcription ---
-def transcribe_audio(audio):
-    if audio is None:
-        return ""
-    try:
-        sample_rate, audio_array = audio
-        audio_input = whisper_processor(
-            audio_array,
-            sampling_rate=sample_rate,
-            return_tensors="pt"
-        )
-        audio_input = {k: v.to(model.device) for k, v in audio_input.items()}
-        with torch.no_grad():
-            predicted_ids = whisper_model.generate(**audio_input)
-        transcription = whisper_processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
-        return transcription
-    except Exception as e:
-        return f"Error transcribing audio: {str(e)}"
-
-
-# --- Generate response with retrieval augmented context ---
-def generate_response(prompt, history):
-    try:
-        # Retrieve top-k similar documents from doc_store
-        retrieved_docs = doc_store.query(prompt, top_k=3) if doc_store.index else []
-        context = "\n\n".join(retrieved_docs)
-
-        # Combine context, history, and prompt
-        history_text = "\n".join([f"User: {h['user']}\nAI: {h['ai']}" for h in history[-5:]])  # last 5 exchanges
-        full_prompt = f"{context}\n{history_text}\nUser: {prompt}\nAI:"
-
-        # Encode and generate
-        input_ids = tokenizer(
-            full_prompt,
-            return_tensors="pt",
-            truncation=True,
-            max_length=4096
-        ).input_ids.to(model.device)
-
-        with torch.no_grad():
-            output_ids = model.generate(
-                input_ids,
-                max_new_tokens=256,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True,
-                pad_token_id=tokenizer.eos_token_id,
-                eos_token_id=tokenizer.eos_token_id,
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "llama2",  # or "phi", "mistral"
+                    "prompt": full_prompt,
+                    "stream": False
+                }
             )
-        response = tokenizer.decode(output_ids[0][input_ids.shape[1]:], skip_special_tokens=True)
-        return response.strip()
+            data = response.json()
+            return data.get("response", "").strip()
     except Exception as e:
-        return f"Error generating response: {str(e)}"
+        print(f"Ollama error: {e}")
+        return None
 
+# Option 2: Simple rule-based fallback
+def simple_response(message: str) -> str:
+    lower = message.lower()
+    
+    responses = {
+        "procrastinat": "I understand procrastination can be frustrating. Let's break this down: what specific task are you avoiding? I can help you create smaller, manageable steps that feel less overwhelming.",
+        "deadline": "Deadlines can create pressure! Let me help you create a realistic timeline. When is your deadline, and what does your task involve? I'll help you work backwards to create a manageable schedule.",
+        "focus": "Staying focused is a skill we can build together. Try the 25-minute Focus Sprint: work for 25 minutes, then take a 5-minute break. I can send you reminders to keep you on track!",
+        "motivat": "Motivation comes and goes, but systems create consistency. Let's identify your 'why' for this task and create small wins that build momentum. What outcome are you hoping to achieve?",
+        "break down": "Perfect! Let's break down your project step by step. First, tell me: What's the main goal of your project? Then we can identify the key milestones and create actionable tasks for each one.",
+        "schedule": "Great idea! Let's create a realistic schedule. How much time do you typically have available each day? I'll help you optimize your schedule around your natural energy patterns.",
+        "distract": "The distraction blocker feature can help! Let's identify what's pulling your attention away and create strategies to minimize those interruptions during your focus time."
+    }
+    
+    for keyword, response in responses.items():
+        if keyword in lower:
+            return response
+    
+    return "That's a great point! Can you tell me more about what specific challenges you're facing? I'm here to provide personalized strategies that work for your situation."
 
-# --- Chat function ---
-def chat_fn(user_input, history, uploaded_file=None, uploaded_image=None, voice_input=None):
-    # Add new docs from file
-    if uploaded_file:
-        content = read_file(uploaded_file)
-        if content.strip() and not content.startswith("Error"):
-            doc_store.add_documents([content])
-
-    # Describe image
-    image_caption = ""
-    if uploaded_image:
-        image_caption = describe_image(uploaded_image)
-
-    # Transcribe voice input
-    voice_text = ""
-    if voice_input:
-        voice_text = transcribe_audio(voice_input)
-
-    # Compose full user prompt with all modalities
-    full_input = user_input if user_input else ""
-    if voice_text and not voice_text.startswith("Error"):
-        full_input = voice_text + "\n" + full_input
-    if image_caption and not image_caption.startswith("Error"):
-        full_input = image_caption + "\n" + full_input
-
-    if not full_input.strip():
-        full_input = "Hello"
-
-    response = generate_response(full_input, history)
-    history.append({"user": full_input, "ai": response})
-
-    # Format chat display
-    chat_display = "\n\n".join([f"**You:** {item['user']}\n\n**AI:** {item['ai']}" for item in history[-20:]])
-
-    return chat_display, history
-
-
-# --- Save/load chat ---
-def save_chat(history):
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
     try:
-        with open("chat_history.json", "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
-        return "✅ Chat saved."
+        # Try Ollama first
+        response = await call_ollama(request.message, request.history)
+        
+        # Fallback to simple responses if Ollama fails
+        if not response:
+            response = simple_response(request.message)
+        
+        return ChatResponse(response=response, success=True)
+    
     except Exception as e:
-        return f"Error saving chat: {str(e)}"
+        print(f"Error: {e}")
+        # Always return something helpful
+        return ChatResponse(
+            response=simple_response(request.message),
+            success=False
+        )
 
+@app.get("/api/health")
+async def health():
+    return {
+        "status": "ok",
+        "ollama_available": await check_ollama()
+    }
 
-def load_chat():
+async def check_ollama():
     try:
-        if os.path.exists("chat_history.json"):
-            with open("chat_history.json", "r", encoding="utf-8") as f:
-                history = json.load(f)
-            chat_display = "\n\n".join([f"**You:** {item['user']}\n\n**AI:** {item['ai']}" for item in history[-20:]])
-            return chat_display, history
-        return "No chat history found.", []
-    except Exception as e:
-        return f"Error loading chat: {str(e)}", []
-
-
-# --- Gradio Interface ---
-with gr.Blocks() as demo:
-    gr.Markdown("# 🧠 Advanced Local AI Chatbot (Mixtral 8x7B + BLIP2 + Whisper + RAG)")
-
-    chatbot_output = gr.Markdown()
-    user_input = gr.Textbox(label="Your message", placeholder="Ask me anything...", lines=2)
-    uploaded_file = gr.File(label="Upload a file (.pdf, .txt, .csv)")
-    uploaded_image = gr.Image(label="Upload an image", type="pil")
-    voice_input = gr.Audio(label="Speak to the AI", sources=["microphone"], type="numpy")
-
-    with gr.Row():
-        submit_btn = gr.Button("💬 Send")
-        save_btn = gr.Button("💾 Save Chat")
-        load_btn = gr.Button("📂 Load Chat")
-
-    state = gr.State([])
-
-    submit_btn.click(
-        chat_fn,
-        [user_input, state, uploaded_file, uploaded_image, voice_input],
-        [chatbot_output, state]
-    )
-    save_btn.click(save_chat, [state], chatbot_output)
-    load_btn.click(load_chat, [], [chatbot_output, state])
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            await client.get("http://localhost:11434/api/tags")
+            return True
+    except:
+        return False
 
 if __name__ == "__main__":
-    demo.launch()
+    import uvicorn
+    print("🚀 Starting FastAPI server...")
+    print("💡 Make sure Ollama is running: ollama run llama2")
+    print("📡 API will be available at: http://localhost:8000")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
