@@ -1,5 +1,7 @@
+// src/components/SettingsModal.tsx - Dynamic version with DB integration
 import React, { useState, useEffect } from 'react';
 import { X, User, Bell, Shield, Palette, CreditCard, Loader2, Gift, Crown, Users, Zap, Check, LogOut, Trash2, Download, Lock, Globe, Sun, Moon, ChevronRight } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -7,16 +9,17 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState('account');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [redeemCode, setRedeemCode] = useState('');
   const [redeemMessage, setRedeemMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
   
   const [settings, setSettings] = useState({
-    name: 'John Doe',
-    email: 'john@example.com',
+    name: '',
+    email: '',
     timezone: 'America/New_York',
     language: 'en',
     emailNotifications: true,
@@ -34,6 +37,33 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     planExpiry: null as string | null,
   });
 
+  // Fetch user data from database
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!isOpen || !session?.user?.id) return;
+      
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/user/settings?userId=${session.user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(prev => ({ 
+            ...prev, 
+            ...data, 
+            name: data.name || session.user?.name || '', 
+            email: data.email || session.user?.email || '' 
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUserData();
+  }, [isOpen, session]);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -50,12 +80,29 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }, [isOpen]);
 
   const handleSave = async () => {
+    if (!session?.user?.id) return;
+    
     setIsSaving(true);
-    setTimeout(() => {
-      alert('Settings saved successfully!');
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session.user.id, ...settings }),
+      });
+      
+      if (response.ok) {
+        alert('Settings saved successfully!');
+        onClose();
+      } else {
+        const data = await response.json();
+        alert(`Failed to save settings: ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Error saving settings. Please try again.');
+    } finally {
       setIsSaving(false);
-      onClose();
-    }, 1000);
+    }
   };
 
   const handleRedeemCode = async () => {
@@ -63,17 +110,42 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setRedeemMessage({ type: 'error', text: 'Please enter a code' });
       return;
     }
+    
     setIsRedeeming(true);
-    setTimeout(() => {
-      setRedeemMessage({ type: 'success', text: 'Pro Plan activated for 30 days!' });
-      setRedeemCode('');
-      setSettings(prev => ({ ...prev, plan: 'pro', planExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() }));
+    setRedeemMessage(null);
+    
+    try {
+      const response = await fetch('/api/user/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session?.user?.id, code: redeemCode.trim().toUpperCase() }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setRedeemMessage({ type: 'success', text: data.message || 'Code redeemed successfully!' });
+        setRedeemCode('');
+        // Update local state with new plan
+        setSettings(prev => ({ 
+          ...prev, 
+          plan: data.plan || 'pro', 
+          planExpiry: data.expiryDate 
+        }));
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        setRedeemMessage({ type: 'error', text: data.message || 'Invalid code' });
+      }
+    } catch (error) {
+      console.error('Error redeeming code:', error);
+      setRedeemMessage({ type: 'error', text: 'Failed to redeem code. Please try again.' });
+    } finally {
       setIsRedeeming(false);
-    }, 1500);
+    }
   };
 
-  const handleLogout = () => {
-    alert('Logging out...');
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/' });
     onClose();
   };
 
@@ -174,7 +246,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
                   <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Loading...</p>
+                  <p className="text-sm text-gray-600">Loading your settings...</p>
                 </div>
               </div>
             ) : (
