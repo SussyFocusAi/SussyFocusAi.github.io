@@ -1,7 +1,8 @@
-// src/pages/api/user/settings.ts
+// src/pages/api/user/settings.ts - Updated with profile image support
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -9,8 +10,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Get the user's session
-  const session = await getSession({ req });
+  const session = await getServerSession(req, res, authOptions);
   
   if (!session || !session.user) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -21,7 +21,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // GET - Fetch user settings
   if (req.method === 'GET') {
     try {
-      // First, get the user's basic info from auth.users
       const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
       
       if (authError) {
@@ -29,18 +28,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ message: 'Error fetching user data' });
       }
 
-      // Then, get their settings from a custom settings table (if exists)
       const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      // Combine auth data with settings data
       const userData = {
         name: authUser.user?.user_metadata?.name || '',
         email: authUser.user?.email || '',
-        // Settings from database (with defaults if not found)
+        profileImage: settingsData?.profile_image || '',
         timezone: settingsData?.timezone || 'America/New_York',
         language: settingsData?.language || 'en',
         emailNotifications: settingsData?.email_notifications ?? true,
@@ -71,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const {
         name,
         email,
+        profileImage,
         timezone,
         language,
         emailNotifications,
@@ -87,7 +85,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } = req.body;
 
       console.log('Updating settings for user:', userId);
-      console.log('Request body:', req.body);
 
       // Update user metadata (name) in auth.users
       if (name) {
@@ -114,6 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { error } = await supabase
           .from('user_settings')
           .update({
+            profile_image: profileImage,
             timezone,
             language,
             email_notifications: emailNotifications,
@@ -138,6 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .from('user_settings')
           .insert({
             user_id: userId,
+            profile_image: profileImage,
             timezone,
             language,
             email_notifications: emailNotifications,
@@ -162,7 +161,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ 
           message: 'Failed to save settings',
           error: settingsError.message,
-          details: settingsError
         });
       }
 

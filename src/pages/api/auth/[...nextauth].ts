@@ -1,5 +1,5 @@
 // src/pages/api/auth/[...nextauth].ts
-import NextAuth from "next-auth"
+import NextAuth, { NextAuthOptions } from "next-auth"
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
@@ -10,7 +10,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export default NextAuth({
+// Export authOptions so it can be used in other API routes
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -62,9 +63,6 @@ export default NextAuth({
     })
   ],
 
-  // Don't use SupabaseAdapter for now - it conflicts with direct auth
-  // adapter: SupabaseAdapter({...}),
-
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -96,5 +94,7 @@ export default NextAuth({
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-  debug: true, // Enable debug to see what's happening
-})
+  debug: true,
+}
+
+export default NextAuth(authOptions)

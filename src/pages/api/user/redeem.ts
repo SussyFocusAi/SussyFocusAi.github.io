@@ -1,18 +1,19 @@
-// src/pages/api/user/redeem.ts
+// src/pages/api/user/redeem.ts - Fixed with getServerSession
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Predefined gift codes (you can store these in database instead)
+// Predefined gift codes
 const GIFT_CODES = {
   'FOCUSAI-PRO-2024': {
     plan: 'pro',
-    duration: 30, // days
+    duration: 30,
     description: 'Pro Plan - 30 Days'
   },
   'TEAM-TRIAL-90': {
@@ -37,8 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  // Get the user's session
-  const session = await getSession({ req });
+  const session = await getServerSession(req, res, authOptions);
   
   if (!session || !session.user) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -54,14 +54,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const normalizedCode = code.trim().toUpperCase();
 
-    // Check if code exists
     const giftCode = GIFT_CODES[normalizedCode as keyof typeof GIFT_CODES];
     
     if (!giftCode) {
       return res.status(400).json({ message: 'Invalid code' });
     }
 
-    // Check if code already used by this user
+    // Check if code already used
     const { data: existingRedemption } = await supabase
       .from('redeemed_codes')
       .select('*')
@@ -107,7 +106,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (recordError) {
       console.error('Error recording redemption:', recordError);
-      // Don't fail if recording fails, plan is already updated
     }
 
     return res.status(200).json({
