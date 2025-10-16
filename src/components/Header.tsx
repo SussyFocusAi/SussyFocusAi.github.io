@@ -1,4 +1,4 @@
-// src/components/Header.tsx - Fixed scroll lock issue
+// src/components/Header.tsx - With DB Profile Picture Support
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from 'next-auth/react';
@@ -24,8 +24,86 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState<string>('');
 
   const authModal = useAuthModal();
+
+  // Fetch user profile image from database
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      if (!session?.user?.id) return;
+      
+      try {
+        const response = await fetch(`/api/user/settings?userId=${session.user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setProfileImage(data.profileImage || '');
+        }
+      } catch (error) {
+        console.error('Error fetching profile image:', error);
+      }
+    };
+
+    if (session) {
+      fetchProfileImage();
+    }
+  }, [session]);
+
+  // Get user initials for fallback avatar
+  const getUserInitials = () => {
+    if (session?.user?.name) {
+      const names = session.user.name.split(' ');
+      if (names.length >= 2) {
+        return `${names[0][0]}${names[1][0]}`.toUpperCase();
+      }
+      return names[0][0].toUpperCase();
+    }
+    if (session?.user?.email) {
+      return session.user.email[0].toUpperCase();
+    }
+    return 'U';
+  };
+
+  // Avatar component with fallback logic
+  const UserAvatar = ({ size = 'default' }: { size?: 'default' | 'large' }) => {
+    const sizeClasses = size === 'large' ? 'w-14 h-14' : 'w-10 h-10';
+    const iconSize = size === 'large' ? 'w-7 h-7' : 'w-5 h-5';
+    const textSize = size === 'large' ? 'text-xl' : 'text-sm';
+
+    // Priority: DB profile image > Session image > Initials
+    const imageUrl = profileImage || session?.user?.image;
+
+    if (imageUrl) {
+      return (
+        <img 
+          src={imageUrl} 
+          alt={session?.user?.name || 'User'} 
+          className={`${sizeClasses} rounded-full object-cover`}
+        />
+      );
+    }
+
+    // Fallback to initials
+    const initials = getUserInitials();
+    const gradientColors = [
+      'from-purple-500 to-blue-500',
+      'from-pink-500 to-rose-500',
+      'from-blue-500 to-cyan-500',
+      'from-green-500 to-emerald-500',
+      'from-orange-500 to-red-500',
+      'from-indigo-500 to-purple-500',
+    ];
+    
+    // Use first letter to pick consistent color
+    const colorIndex = initials.charCodeAt(0) % gradientColors.length;
+    const gradient = gradientColors[colorIndex];
+
+    return (
+      <div className={`${sizeClasses} bg-gradient-to-br ${gradient} rounded-full flex items-center justify-center`}>
+        <span className={`${textSize} font-bold text-white`}>{initials}</span>
+      </div>
+    );
+  };
 
   const handleNavClick = (section: keyof NonNullable<typeof refs>) => {
     setIsMobileMenuOpen(false);
@@ -108,13 +186,11 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
     };
   }, [isMobileMenuOpen]);
 
-  // Fix scroll lock on window resize (mobile to desktop transition)
+  // Fix scroll lock on window resize
   useEffect(() => {
     const handleResize = () => {
-      // If window becomes desktop size (md breakpoint = 768px), close mobile menu
       if (window.innerWidth >= 768 && isMobileMenuOpen) {
         setIsMobileMenuOpen(false);
-        // Force unlock scroll
         document.body.style.overflow = '';
         document.body.style.position = '';
         document.body.style.width = '';
@@ -290,17 +366,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    {session.user?.image ? (
-                      <img 
-                        src={session.user.image} 
-                        alt={session.user?.name || 'User'} 
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                    )}
+                    <UserAvatar />
                     <span className="text-sm font-semibold text-gray-700">
                       {session.user?.name?.split(' ')[0] || session.user?.email?.split('@')[0] || 'User'}
                     </span>
@@ -414,17 +480,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                 <>
                   <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-100">
                     <div className="flex items-center gap-3 mb-4">
-                      {session.user?.image ? (
-                        <img 
-                          src={session.user.image} 
-                          alt={session.user?.name || 'User'} 
-                          className="w-14 h-14 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                          <User className="w-7 h-7 text-white" />
-                        </div>
-                      )}
+                      <UserAvatar size="large" />
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 truncate">{session.user?.name || 'User'}</p>
                         <p className="text-sm text-gray-600 truncate">{session.user?.email}</p>
