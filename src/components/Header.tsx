@@ -1,4 +1,4 @@
-// src/components/Header.tsx - With DB Profile Picture Support
+// src/components/Header.tsx - Fixed Email Overflow Bug
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from 'next-auth/react';
@@ -373,10 +373,14 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                   </button>
 
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                      <div className="px-4 py-2 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">{session.user?.name || 'User'}</p>
-                        <p className="text-xs text-gray-500">{session.user?.email}</p>
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {session.user?.name || 'User'}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5" title={session.user?.email || ''}>
+                          {session.user?.email}
+                        </p>
                       </div>
                       
                       <button
@@ -386,16 +390,16 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                       >
-                        <Settings className="w-4 h-4" />
-                        Settings
+                        <Settings className="w-4 h-4 flex-shrink-0" />
+                        <span>Settings</span>
                       </button>
                       
                       <button
                         onClick={handleSignOut}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                       >
-                        <LogOut className="w-4 h-4" />
-                        Sign Out
+                        <LogOut className="w-4 h-4 flex-shrink-0" />
+                        <span>Sign Out</span>
                       </button>
                     </div>
                   )}
@@ -483,7 +487,7 @@ const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate, scrollToSectio
                       <UserAvatar size="large" />
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 truncate">{session.user?.name || 'User'}</p>
-                        <p className="text-sm text-gray-600 truncate">{session.user?.email}</p>
+                        <p className="text-sm text-gray-600 truncate" title={session.user?.email || ''}>{session.user?.email}</p>
                       </div>
                     </div>
                     

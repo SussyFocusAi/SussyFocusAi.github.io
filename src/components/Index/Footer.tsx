@@ -25,7 +25,7 @@ export default function Footer() {
               Transform your productivity with AI-powered focus sessions, smart task management, and personalized insights. Stop procrastinating and start achieving your goals.
             </p>
             <div className="flex space-x-4">
-              <a href="https://instagram.com/focusai" className="p-2 bg-gray-800 rounded-lg hover:bg-purple-600 transition-colors duration-200" aria-label="Follow us on Instagram">
+              <a href="https://www.instagram.com/focus_aiapp/" className="p-2 bg-gray-800 rounded-lg hover:bg-purple-600 transition-colors duration-200" aria-label="Follow us on Instagram">
                 <Instagram className="w-5 h-5" />
               </a>
               <a href="https://twitter.com/focusai" className="p-2 bg-gray-800 rounded-lg hover:bg-blue-500 transition-colors duration-200" aria-label="Follow us on Twitter">
