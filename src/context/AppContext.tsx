@@ -1,127 +1,149 @@
 // src/context/AppContext.tsx
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import * as SupabaseService from '../services/subabase';
+import type { Task } from '../services/subabase';
 
-export interface Task {
-  id: number;
+interface TaskInput {
   title: string;
   progress: number;
   dueDate: string;
   priority: 'high' | 'medium' | 'low';
-  completed: boolean;
   category: string;
+  completed: boolean;
   subtasks?: string[];
-  timeEstimate?: number;
-  file?: File;
+  timeEstimate: number;
 }
 
 interface AppContextType {
   tasks: Task[];
-  addTask: (task: Omit<Task, 'id'>) => void;
-  updateTask: (id: number, updates: Partial<Task>) => void;
-  deleteTask: (id: number) => void;
-  toggleComplete: (id: number) => void;
-  uploadFile: (taskId: number, file: File) => void;
-  updateProgress: (id: number, progress: number) => void;
+  loading: boolean;
+  error: string | null;
+  addTask: (task: TaskInput) => Promise<void>;
+  updateTask: (id: number, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (id: number) => Promise<void>;
+  toggleComplete: (id: number) => Promise<void>;
+  updateProgress: (id: number, progress: number) => Promise<void>;
+  uploadFile: (taskId: number, file: File) => Promise<void>;
+  refreshTasks: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>([
-    { 
-      id: 1, 
-      title: "Complete React Project", 
-      progress: 75, 
-      dueDate: "2025-01-15", 
-      priority: "high", 
-      completed: false, 
-      category: "work",
-      subtasks: ["Setup project", "Build components", "Testing"],
-      timeEstimate: 180
-    },
-    { 
-      id: 2, 
-      title: "Study for Finals", 
-      progress: 45, 
-      dueDate: "2025-01-20", 
-      priority: "high", 
-      completed: false, 
-      category: "education",
-      subtasks: ["Review notes", "Practice problems"],
-      timeEstimate: 240
-    },
-    { 
-      id: 3, 
-      title: "Write Blog Post", 
-      progress: 20, 
-      dueDate: "2025-01-18", 
-      priority: "medium", 
-      completed: false, 
-      category: "personal",
-      subtasks: ["Outline", "Draft", "Edit"],
-      timeEstimate: 120
-    },
-    { 
-      id: 4, 
-      title: "Plan Weekend Trip", 
-      progress: 90, 
-      dueDate: "2025-01-12", 
-      priority: "low", 
-      completed: false, 
-      category: "personal",
-      subtasks: ["Book hotel", "Plan itinerary"],
-      timeEstimate: 60
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load tasks on mount
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedTasks = await SupabaseService.fetchTasks();
+      setTasks(fetchedTasks);
+    } catch (err) {
+      console.error('Error loading tasks:', err);
+      setError('Failed to load tasks');
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  const addTask = (task: Omit<Task, 'id'>) => {
-    const newTask = {
-      ...task,
-      id: Date.now()
-    };
-    setTasks(prev => [...prev, newTask]);
   };
 
-  const updateTask = (id: number, updates: Partial<Task>) => {
-    setTasks(prev => prev.map(task => 
-      task.id === id ? { ...task, ...updates } : task
-    ));
+  const addTask = async (taskInput: TaskInput) => {
+    try {
+      const newTask = await SupabaseService.addTask({
+        title: taskInput.title,
+        progress: taskInput.progress,
+        due_date: taskInput.dueDate,
+        priority: taskInput.priority,
+        category: taskInput.category,
+        completed: taskInput.completed,
+        subtasks: taskInput.subtasks,
+        time_estimate: taskInput.timeEstimate,
+      });
+      setTasks(prev => [...prev, newTask]);
+    } catch (err) {
+      console.error('Error adding task:', err);
+      throw err;
+    }
   };
 
-  const deleteTask = (id: number) => {
-    setTasks(prev => prev.filter(task => task.id !== id));
+  const updateTask = async (id: number, updates: Partial<Task>) => {
+    try {
+      const updatedTask = await SupabaseService.updateTask(id, updates);
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+    } catch (err) {
+      console.error('Error updating task:', err);
+      throw err;
+    }
   };
 
-  const toggleComplete = (id: number) => {
-    setTasks(prev => prev.map(task =>
-      task.id === id 
-        ? { ...task, completed: !task.completed, progress: !task.completed ? 100 : task.progress }
-        : task
-    ));
+  const deleteTask = async (id: number) => {
+    try {
+      await SupabaseService.deleteTask(id);
+      setTasks(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      console.error('Error deleting task:', err);
+      throw err;
+    }
   };
 
-  const uploadFile = (taskId: number, file: File) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, file } : task
-    ));
+  const toggleComplete = async (id: number) => {
+    try {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      
+      const updatedTask = await SupabaseService.toggleTaskComplete(id, !task.completed);
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+    } catch (err) {
+      console.error('Error toggling task:', err);
+      throw err;
+    }
   };
 
-  const updateProgress = (id: number, progress: number) => {
-    setTasks(prev => prev.map(task => 
-      task.id === id ? { ...task, progress: Math.min(100, Math.max(0, progress)) } : task
-    ));
+  const updateProgress = async (id: number, progress: number) => {
+    try {
+      const updatedTask = await SupabaseService.updateTaskProgress(id, progress);
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+    } catch (err) {
+      console.error('Error updating progress:', err);
+      throw err;
+    }
+  };
+
+  const uploadFile = async (taskId: number, file: File) => {
+    try {
+      const updatedTask = await SupabaseService.uploadTaskFile(taskId, file);
+      setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      throw err;
+    }
+  };
+
+  const refreshTasks = async () => {
+    await loadTasks();
   };
 
   return (
-    <AppContext.Provider value={{
-      tasks,
-      addTask,
-      updateTask,
-      deleteTask,
-      toggleComplete,
-      uploadFile,
-      updateProgress
-    }}>
+    <AppContext.Provider
+      value={{
+        tasks,
+        loading,
+        error,
+        addTask,
+        updateTask,
+        deleteTask,
+        toggleComplete,
+        updateProgress,
+        uploadFile,
+        refreshTasks,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );
