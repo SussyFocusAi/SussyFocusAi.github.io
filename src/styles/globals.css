@@ -8,7 +8,28 @@
   --background: #ffffff;
   --foreground: #171717;
 }
+/* Disable text selection on the entire page */
+* {
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+  user-select: none; /* Standard */
+}
 
+/* Re-enable selection for input fields and text areas */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Prevent double-click zoom on mobile */
+* {
+  touch-action: manipulation;
+}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

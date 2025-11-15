@@ -148,7 +148,7 @@ export default function StatsSection({ currentStat }: StatsSectionProps) {
           {stats.map((stat, index) => (
             <div 
               key={index} 
-              className={`group relative bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 ${
+              className={`group relative bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden ${
                 currentStat === index ? 'ring-2 ring-purple-400 scale-105' : ''
               }`}
               style={{ 
@@ -159,31 +159,33 @@ export default function StatsSection({ currentStat }: StatsSectionProps) {
               }}
             >
               {/* Icon */}
-              <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                {stat.icon}
+              <div className={`inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${stat.color} text-white mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                <div className="w-5 h-5 sm:w-6 sm:h-6">
+                  {stat.icon}
+                </div>
               </div>
 
               {/* Number */}
-              <div className="mb-2">
-                <div className={`text-4xl sm:text-5xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent flex items-start gap-1`}>
+              <div className="mb-2 sm:mb-3">
+                <div className={`text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent flex items-start gap-0.5 sm:gap-1`}>
                   {formatNumber(counts[index], index)}
-                  <span className="text-2xl">{stat.suffix}</span>
+                  <span className="text-xl sm:text-2xl">{stat.suffix}</span>
                 </div>
               </div>
 
               {/* Label */}
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-gray-900">{stat.label}</h3>
-                <p className="text-sm text-gray-600">{stat.sublabel}</p>
+              <div className="space-y-0.5 sm:space-y-1">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">{stat.label}</h3>
+                <p className="text-xs sm:text-sm text-gray-600">{stat.sublabel}</p>
               </div>
 
               {/* Hover Effect Arrow */}
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <ArrowUpRight className={`w-5 h-5 bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`} />
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <ArrowUpRight className={`w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`} />
               </div>
 
               {/* Bottom Accent Line */}
-              <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.color} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-b-2xl`}></div>
+              <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.color} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`}></div>
             </div>
           ))}
         </div>
