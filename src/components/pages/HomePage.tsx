@@ -13,13 +13,12 @@ import PricingSection from "../Index/sections/PricingSection";
 import CTASection from "../Index/sections/CTASection";
 import Footer from "../Index/Footer";
 
-
 interface HomePageProps {
   heroRef: React.RefObject<HTMLDivElement>;
   featuresRef: React.RefObject<HTMLDivElement>;
   teamRef: React.RefObject<HTMLDivElement>;
   pricingRef: React.RefObject<HTMLDivElement>;
-  onScrollToSection: (section: string) => void;  // Add this
+  onScrollToSection: (section: string) => void;
 }
 
 export default function HomePage({ heroRef, featuresRef, teamRef, pricingRef }: HomePageProps) {

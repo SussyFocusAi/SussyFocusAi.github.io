@@ -1,7 +1,5 @@
-// src/components/sections/PricingSection.tsx
 import React, { useState } from 'react';
 import { CheckCircle, ArrowRight, Zap, Users, Sparkles, Shield, Clock, Star, X } from 'lucide-react';
-import Button from '../../Button';
 
 interface PricingPlan {
   title: string;
@@ -15,11 +13,7 @@ interface PricingPlan {
   savings?: string;
 }
 
-interface PricingSectionProps {
-  pricingRef: React.RefObject<HTMLDivElement>;
-}
-
-export default function PricingSection({ pricingRef }: PricingSectionProps) {
+export default function PricingSection() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -100,28 +94,36 @@ export default function PricingSection({ pricingRef }: PricingSectionProps) {
   ];
 
   return (
-    <section ref={pricingRef} className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 bg-gradient-to-b from-white to-purple-50/50" id="pricing">
-      <div className="container mx-auto max-w-7xl">
+    <section className="relative py-20 lg:py-32 px-4 sm:px-6 overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-blue-50"></div>
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+      </div>
+
+      <div className="relative container mx-auto max-w-7xl">
         {/* Header */}
-        <div className="text-center mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
-            <Star className="w-4 h-4" />
+        <div className="text-center mb-16 lg:mb-20">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 px-5 py-2.5 rounded-full text-sm font-semibold mb-6 shadow-sm border border-purple-200/50 backdrop-blur-sm">
+            <Star className="w-4 h-4 animate-pulse" />
             Pricing Plans
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-purple-900 to-blue-900 bg-clip-text text-transparent">
             Simple, Transparent Pricing
           </h2>
-          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            Choose the plan that fits your productivity goals
+          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-10">
+            Choose the plan that fits your productivity goals. Start free, upgrade anytime.
           </p>
 
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-white rounded-full p-1 shadow-md border border-gray-200">
+          {/* Enhanced Billing Toggle */}
+          <div className="inline-flex items-center bg-white/80 backdrop-blur-md rounded-full p-1.5 shadow-lg border border-purple-200/50">
             <button
               onClick={() => setIsAnnual(false)}
-              className={`px-6 sm:px-8 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${
+              className={`relative px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${
                 !isAnnual
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg scale-105'
                   : 'text-gray-700 hover:text-gray-900'
               }`}
             >
@@ -129,90 +131,94 @@ export default function PricingSection({ pricingRef }: PricingSectionProps) {
             </button>
             <button
               onClick={() => setIsAnnual(true)}
-              className={`px-6 sm:px-8 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 relative ${
+              className={`relative px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${
                 isAnnual
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg scale-105'
                   : 'text-gray-700 hover:text-gray-900'
               }`}
             >
               Annual
-              {!isAnnual && (
-                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                  -17%
-                </span>
-              )}
+              <span className="absolute -top-3 -right-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs px-2.5 py-1 rounded-full font-bold shadow-lg animate-bounce">
+                Save 17%
+              </span>
             </button>
           </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
           {pricing.map((plan, index) => (
             <div
               key={index}
-              className={`relative bg-white rounded-2xl transition-all duration-300 ${
+              className={`relative bg-white/90 backdrop-blur-sm rounded-3xl transition-all duration-500 hover:translate-y-[-8px] group ${
                 plan.popular 
-                  ? 'shadow-2xl shadow-purple-200 md:scale-105 border-2 border-purple-500' 
-                  : 'shadow-lg hover:shadow-xl border border-gray-200'
+                  ? 'shadow-2xl shadow-purple-200/50 lg:scale-105 border-2 border-purple-400 ring-4 ring-purple-100' 
+                  : 'shadow-xl hover:shadow-2xl border border-gray-200/50'
               }`}
+              style={{ animationDelay: `${index * 100}ms` }}
             >
+              {/* Gradient Overlay on Hover */}
+              <div className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${plan.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
+
               {/* Popular Badge */}
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                  <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg whitespace-nowrap">
-                    Most Popular
+                <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 z-10">
+                  <div className="bg-gradient-to-r from-purple-600 via-purple-500 to-blue-600 text-white px-8 py-2.5 rounded-full text-sm font-bold shadow-xl whitespace-nowrap animate-pulse">
+                    ⭐ Most Popular
                   </div>
                 </div>
               )}
 
               {/* Card Content */}
-              <div className={`p-6 sm:p-8 ${plan.popular ? 'pt-10 sm:pt-12' : ''}`}>
+              <div className={`relative p-8 ${plan.popular ? 'pt-14' : ''}`}>
                 {/* Icon & Title */}
-                <div className="mb-6">
-                  <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} text-white mb-4`}>
+                <div className="mb-8">
+                  <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br ${plan.color} text-white mb-5 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     {plan.icon}
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.title}</h3>
-                  <p className="text-gray-600 text-sm">{plan.description}</p>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">{plan.title}</h3>
+                  <p className="text-gray-600">{plan.description}</p>
                 </div>
 
                 {/* Pricing */}
-                <div className="mb-6 pb-6 border-b border-gray-200">
-                  <div className="flex items-baseline gap-1 mb-2">
-                    <span className="text-4xl sm:text-5xl font-bold text-gray-900">{plan.price}</span>
-                    <span className="text-gray-600 text-base">{plan.period}</span>
+                <div className="mb-8 pb-8 border-b border-gray-200">
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <span className="text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                      {plan.price}
+                    </span>
+                    <span className="text-gray-600 text-lg">{plan.period}</span>
                   </div>
                   {plan.savings && (
-                    <span className="inline-flex items-center gap-1 text-green-700 text-xs font-semibold bg-green-100 px-2.5 py-1 rounded-full">
-                      {plan.savings}
+                    <span className="inline-flex items-center gap-1.5 text-green-700 text-sm font-semibold bg-gradient-to-r from-green-100 to-emerald-100 px-3 py-1.5 rounded-full shadow-sm">
+                      💰 {plan.savings}
                     </span>
                   )}
                 </div>
 
                 {/* Features */}
-                <ul className="space-y-3 mb-8">
+                <ul className="space-y-4 mb-10">
                   {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700 text-sm">{feature}</span>
+                    <li key={idx} className="flex items-start gap-3 group/item">
+                      <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
+                      <span className="text-gray-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
                 {/* CTA Button */}
-                <Button 
-                  className={`w-full py-3 sm:py-4 font-semibold transition-all duration-200 ${
+                <button
+                  className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 group/btn ${
                     plan.popular 
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg' 
-                      : 'bg-gray-900 hover:bg-gray-800 text-white'
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl hover:scale-105' 
+                      : 'bg-gray-900 hover:bg-gray-800 text-white hover:scale-105 shadow-md hover:shadow-lg'
                   }`}
                 >
                   {plan.price === 'Free' ? 'Get Started' : 'Start Free Trial'}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                  <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+                </button>
 
                 {plan.price !== 'Free' && (
-                  <p className="text-center text-xs text-gray-500 mt-3">
+                  <p className="text-center text-sm text-gray-500 mt-4">
                     14-day free trial • No credit card required
                   </p>
                 )}
@@ -222,99 +228,90 @@ export default function PricingSection({ pricingRef }: PricingSectionProps) {
         </div>
 
         {/* Trust Indicators */}
-        <div className="grid sm:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 sm:gap-4 bg-white rounded-xl p-4 sm:p-5 shadow-sm">
-            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-green-700" />
+        <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto mb-16">
+          {[
+            { icon: Shield, color: 'green', title: 'Secure & Private', desc: 'Bank-level encryption' },
+            { icon: Clock, color: 'blue', title: 'Cancel Anytime', desc: 'No contracts' },
+            { icon: Sparkles, color: 'purple', title: 'Money-back', desc: '30-day guarantee' }
+          ].map((item, idx) => (
+            <div key={idx} className="flex items-center gap-4 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px] border border-gray-100">
+              <div className={`flex-shrink-0 w-14 h-14 bg-${item.color}-100 rounded-xl flex items-center justify-center shadow-md`}>
+                <item.icon className={`w-7 h-7 text-${item.color}-700`} />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 mb-1">{item.title}</h4>
+                <p className="text-sm text-gray-600">{item.desc}</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 text-sm">Secure & Private</h4>
-              <p className="text-xs text-gray-600">Bank-level encryption</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 sm:gap-4 bg-white rounded-xl p-4 sm:p-5 shadow-sm">
-            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-blue-700" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 text-sm">Cancel Anytime</h4>
-              <p className="text-xs text-gray-600">No contracts</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 sm:gap-4 bg-white rounded-xl p-4 sm:p-5 shadow-sm">
-            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-purple-700" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 text-sm">Money-back</h4>
-              <p className="text-xs text-gray-600">30-day guarantee</p>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* FAQ CTA */}
-        <div className="text-center mt-12 sm:mt-16">
-          <p className="text-gray-700 text-base sm:text-lg mb-3">Have questions about our plans?</p>
+        <div className="text-center">
+          <p className="text-gray-700 text-lg mb-4 font-medium">Have questions about our plans?</p>
           <button 
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 font-semibold group"
+            className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 font-bold text-lg group/faq bg-purple-50 hover:bg-purple-100 px-6 py-3 rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
           >
-            View FAQ
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            View Full Comparison
+            <ArrowRight className="w-5 h-5 group-hover/faq:translate-x-2 transition-transform" />
           </button>
         </div>
       </div>
 
-      {/* Comparison Modal */}
+      {/* Enhanced Comparison Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-purple-200 animate-in zoom-in-95 duration-300">
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-300"
+          onClick={() => setShowModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="relative flex items-center justify-between p-6 sm:p-8 border-b border-purple-100 bg-gradient-to-br from-purple-100 via-blue-50 to-pink-50 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10"></div>
-              <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-purple-600 mb-2 shadow-sm">
-                  <Sparkles className="w-3 h-3" />
+            <div className="relative flex items-center justify-between p-8 border-b border-gray-200 bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-bold text-purple-600 mb-3 shadow-sm">
+                  <Sparkles className="w-4 h-4" />
                   Complete Feature Breakdown
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
                   Plan Comparison
                 </h2>
-                <p className="text-sm text-gray-600 mt-2">Find the perfect plan for your needs</p>
+                <p className="text-gray-600">Find the perfect plan for your needs</p>
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="relative z-10 text-gray-400 hover:text-gray-700 transition-all hover:bg-white/80 backdrop-blur-sm rounded-xl p-2 hover:rotate-90 duration-300"
+                className="text-gray-400 hover:text-gray-900 transition-all hover:bg-white/90 backdrop-blur-sm rounded-xl p-3 hover:rotate-90 duration-300 shadow-md"
               >
-                <X size={24} />
+                <X size={28} />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="overflow-auto max-h-[calc(90vh-100px)]">
+            <div className="overflow-auto max-h-[calc(90vh-240px)]">
               <table className="w-full">
-                <thead className="sticky top-0 bg-white border-b-2 border-gray-200 z-10">
+                <thead className="sticky top-0 bg-gradient-to-r from-gray-50 to-purple-50 border-b-2 border-purple-200 z-10 shadow-sm">
                   <tr>
-                    <th className="text-left py-4 px-6 font-bold text-gray-900 bg-gray-50">Feature</th>
-                    <th className="text-center py-4 px-6 font-bold text-gray-900 bg-gray-50/50">
-                      <div className="flex flex-col items-center">
-                        <Sparkles className="w-5 h-5 text-gray-600 mb-1" />
-                        <span>Starter</span>
+                    <th className="text-left py-5 px-6 font-bold text-gray-900 text-lg">Feature</th>
+                    <th className="text-center py-5 px-6 font-bold text-gray-900">
+                      <div className="flex flex-col items-center gap-2">
+                        <Sparkles className="w-6 h-6 text-gray-600" />
+                        <span className="text-lg">Starter</span>
                       </div>
                     </th>
-                    <th className="text-center py-4 px-6 font-bold bg-purple-50">
-                      <div className="flex flex-col items-center">
-                        <Zap className="w-5 h-5 text-purple-600 mb-1" />
-                        <span className="text-purple-600">Pro</span>
-                        <span className="text-xs font-normal text-purple-600">Most Popular</span>
+                    <th className="text-center py-5 px-6 font-bold bg-gradient-to-b from-purple-100 to-purple-50">
+                      <div className="flex flex-col items-center gap-2">
+                        <Zap className="w-6 h-6 text-purple-600" />
+                        <span className="text-lg text-purple-600">Pro</span>
+                        <span className="text-xs font-semibold text-purple-600 bg-purple-200 px-3 py-1 rounded-full">Most Popular</span>
                       </div>
                     </th>
-                    <th className="text-center py-4 px-6 font-bold text-gray-900 bg-gray-50/50">
-                      <div className="flex flex-col items-center">
-                        <Users className="w-5 h-5 text-blue-600 mb-1" />
-                        <span>Team</span>
+                    <th className="text-center py-5 px-6 font-bold text-gray-900">
+                      <div className="flex flex-col items-center gap-2">
+                        <Users className="w-6 h-6 text-blue-600" />
+                        <span className="text-lg">Team</span>
                       </div>
                     </th>
                   </tr>
@@ -323,14 +320,14 @@ export default function PricingSection({ pricingRef }: PricingSectionProps) {
                   {comparisonData.map((row, index) => (
                     <tr 
                       key={index} 
-                      className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                        index === 0 ? 'bg-purple-50/30' : ''
+                      className={`border-b border-gray-100 hover:bg-purple-50/30 transition-colors ${
+                        index === 0 ? 'bg-purple-50/50 font-semibold' : ''
                       }`}
                     >
-                      <td className="py-4 px-6 font-medium text-gray-900">{row.feature}</td>
-                      <td className="text-center py-4 px-6 text-gray-700">{row.starter}</td>
-                      <td className="text-center py-4 px-6 text-gray-700 bg-purple-50/20 font-medium">{row.pro}</td>
-                      <td className="text-center py-4 px-6 text-gray-700">{row.team}</td>
+                      <td className="py-5 px-6 font-semibold text-gray-900">{row.feature}</td>
+                      <td className="text-center py-5 px-6 text-gray-700">{row.starter}</td>
+                      <td className="text-center py-5 px-6 text-purple-600 bg-purple-50/30 font-semibold">{row.pro}</td>
+                      <td className="text-center py-5 px-6 text-gray-700">{row.team}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -338,13 +335,13 @@ export default function PricingSection({ pricingRef }: PricingSectionProps) {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-3 justify-center">
-              <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg px-8">
+            <div className="p-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-purple-50 flex flex-col sm:flex-row gap-4 justify-center">
+              <button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-10 py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                 Start Free Trial
-              </Button>
+              </button>
               <button
                 onClick={() => setShowModal(false)}
-                className="px-8 py-3 rounded-lg border-2 border-gray-300 hover:border-gray-400 font-semibold text-gray-700 hover:bg-white transition-colors"
+                className="px-10 py-4 rounded-xl border-2 border-gray-300 hover:border-gray-400 font-bold text-gray-700 hover:bg-white transition-all duration-300 hover:scale-105"
               >
                 Close
               </button>
@@ -352,6 +349,23 @@ export default function PricingSection({ pricingRef }: PricingSectionProps) {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes blob {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </section>
   );
 }

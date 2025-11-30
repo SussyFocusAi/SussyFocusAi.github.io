@@ -149,7 +149,7 @@ export default function HeroSection({ heroRef, isVisible }: HeroSectionProps) {
                 className="w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent shadow-lg transition-all duration-300 focus:scale-105"
               />
               <button className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium whitespace-nowrap transform hover:scale-105 active:scale-95 flex items-center justify-center">
-                Start Free Trial <ChevronRight className="w-4 sm:w-5 h-4 sm:h-5 ml-2" />
+                Get Started for Free <ChevronRight className="w-4 sm:w-5 h-4 sm:h-5 ml-2" />
               </button>
             </div>
             
