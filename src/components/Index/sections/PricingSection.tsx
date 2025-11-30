@@ -13,7 +13,11 @@ interface PricingPlan {
   savings?: string;
 }
 
-export default function PricingSection() {
+interface PricingSectionProps {
+  PricingRef: React.RefObject<HTMLDivElement>;
+}
+
+export default function PricingSection({ PricingRef }: PricingSectionProps) {
   const [isAnnual, setIsAnnual] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -94,7 +98,7 @@ export default function PricingSection() {
   ];
 
   return (
-    <section className="relative py-20 lg:py-32 px-4 sm:px-6 overflow-hidden">
+    <section ref={PricingRef} className="relative py-20 lg:py-32 px-4 sm:px-6 overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-blue-50"></div>
       <div className="absolute inset-0 opacity-30">
