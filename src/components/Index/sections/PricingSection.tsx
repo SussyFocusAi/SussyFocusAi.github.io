@@ -14,10 +14,11 @@ interface PricingPlan {
 }
 
 interface PricingSectionProps {
-  PricingRef: React.RefObject<HTMLDivElement>;
+  // The type of the ref is correct: a RefObject pointing to an HTMLDivElement
+  pricingRef: React.RefObject<HTMLDivElement>;
 }
 
-export default function PricingSection({ PricingRef }: PricingSectionProps) {
+export default function PricingSection({ pricingRef }: PricingSectionProps) {
   const [isAnnual, setIsAnnual] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -98,7 +99,9 @@ export default function PricingSection({ PricingRef }: PricingSectionProps) {
   ];
 
   return (
-    <section ref={PricingRef} className="relative py-20 lg:py-32 px-4 sm:px-6 overflow-hidden">
+    // FIX: The pricingRef prop must be passed to the 'ref' attribute of the element you want to reference.
+    // The previous code already had `ref={pricingRef}`, which was correct, but I'll make sure it's clear.
+    <section ref={pricingRef} className="relative py-20 lg:py-32 px-4 sm:px-6 overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-blue-50"></div>
       <div className="absolute inset-0 opacity-30">
