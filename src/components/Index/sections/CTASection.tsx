@@ -3,11 +3,10 @@ import React, { useState } from 'react';
 import { TrendingUp, ChevronRight, CheckCircle, AlertCircle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client ONCE (outside component)
+// Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Only create client if we have valid credentials
 const supabase = supabaseUrl && supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
@@ -18,19 +17,11 @@ export default function CTASection() {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Test if component loaded
-  console.log('CTASection component loaded');
-  console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log('Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    alert('Button clicked! Submitting...');
-    
     // Check if Supabase is configured
     if (!supabase) {
-      alert('Supabase not configured!');
       setStatus('error');
       setErrorMessage('Configuration error. Please contact support.');
       return;
@@ -38,7 +29,6 @@ export default function CTASection() {
     
     // Basic email validation
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      alert('Invalid email format!');
       setStatus('error');
       setErrorMessage('Please enter a valid email address');
       return;
@@ -53,29 +43,48 @@ export default function CTASection() {
         .from('waitlist')
         .insert([
           { 
-            email: email.toLowerCase(),
+            email: email.toLowerCase().trim(),
             created_at: new Date().toISOString()
           }
         ])
         .select();
 
       if (error) {
-        alert(`Error: ${error.message}`);
-        // Handle duplicate email error
+        console.error('Supabase error:', error);
+        
+        // Handle specific error codes
         if (error.code === '23505') {
           setStatus('error');
-          setErrorMessage('This email is already on the waitlist!');
+          setErrorMessage('This email is already on the waitlist! 🎉');
+        } else if (error.code === '42501' || error.message.includes('row-level security')) {
+          setStatus('error');
+          setErrorMessage('Database permission error. Please contact support.');
+          console.error('RLS ERROR: You need to create a policy in Supabase. See console for details.');
+          console.error('Run this SQL in Supabase SQL Editor:');
+          console.error(`
+            ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
+            
+            CREATE POLICY "Allow public waitlist signups"
+            ON waitlist
+            FOR INSERT
+            TO anon
+            WITH CHECK (true);
+          `);
         } else {
           setStatus('error');
-          setErrorMessage(`Error: ${error.message}`);
+          setErrorMessage('Something went wrong. Please try again.');
         }
       } else {
-        alert('SUCCESS! Email added to waitlist! 🎉');
         setStatus('success');
         setEmail('');
+        
+        // Reset success message after 5 seconds
+        setTimeout(() => {
+          if (status === 'success') setStatus('idle');
+        }, 5000);
       }
     } catch (err) {
-      alert('Network error!');
+      console.error('Network error:', err);
       setStatus('error');
       setErrorMessage('Network error. Please check your connection.');
     } finally {
@@ -103,16 +112,13 @@ export default function CTASection() {
               onChange={(e) => {
                 setEmail(e.target.value);
                 setStatus('idle');
+                setErrorMessage('');
               }}
               disabled={isLoading || status === 'success'}
               className="w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-0 bg-white/10 backdrop-blur-sm text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-300 focus:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button 
               type="submit"
-              onClick={(e) => {
-                console.log('🎯 BUTTON CLICKED DIRECTLY!');
-              }}
-              onMouseDown={() => console.log('👆 MOUSE DOWN ON BUTTON')}
               disabled={isLoading || status === 'success'}
               className="whitespace-nowrap font-semibold transform transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 px-6 py-3 bg-white text-purple-900 rounded-xl hover:bg-gray-100"
             >

@@ -225,7 +225,10 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
     >
       <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-[90vw] sm:max-w-md lg:max-w-lg xl:max-w-xl max-h-[95vh] overflow-y-auto transform transition-all duration-300 ${
         isTransitioning ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
-      } animate-in slide-in-from-bottom-4 duration-300`}>
+      } animate-in slide-in-from-bottom-4 duration-300 scrollbar-hide`} style={{
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      }}>
         
         {/* Toast */}
         {toast && (
@@ -260,19 +263,6 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="mx-6 lg:mx-8 mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200/50 rounded-xl">
-          <p className="text-xs lg:text-sm text-gray-700">
-            <strong className="text-blue-700">Demo Credentials:</strong> 
-            <br className="sm:hidden" />
-            <span className="inline-flex items-center gap-2 mt-1">
-              <code className="bg-white/80 px-2 py-0.5 rounded border border-blue-200">demo@focusai.com</code>
-              <span className="text-gray-500">•</span>
-              <code className="bg-white/80 px-2 py-0.5 rounded border border-blue-200">demo123</code>
-            </span>
-          </p>
         </div>
 
         {/* Form */}
@@ -463,6 +453,12 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onSignI
           </div>
         </form>
       </div>
+      
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }
