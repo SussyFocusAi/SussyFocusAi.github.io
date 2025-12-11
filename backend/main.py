@@ -1,278 +1,163 @@
+# backend/main.py (Modified for Structured Output)
+
+import os
+import base64
+import json
+from io import BytesIO
+from PIL import Image
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional, Dict
-import uvicorn
-from datetime import datetime
-import os
-from anthropic import Anthropic
+from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional
 
-app = FastAPI(title="FocusAI Productivity Coach API")
+# Import the Gemini SDK
+from google import genai
+from google.genai import types
 
-# CORS middleware
+# --- 1. CONFIGURATION ---
+# (Client initialization remains the same)
+try:
+    client = genai.Client()
+except Exception as e:
+    print(f"Error initializing Gemini client: {e}")
+    print("Please ensure your GEMINI_API_KEY environment variable is set.")
+    client = None
+
+# Initialize FastAPI App (CORS setup remains the same)
+app = FastAPI()
+
+origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    CORSMiddleware, allow_origins=origins, allow_credentials=True, 
+    allow_methods=["*"], allow_headers=["*"]
 )
 
-# Initialize Anthropic client (you can also use OpenAI)
-# Set your API key: export ANTHROPIC_API_KEY="your-key-here"
-try:
-    anthropic_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    AI_ENABLED = True
-except:
-    AI_ENABLED = False
-    print("⚠️  Warning: No AI API key found. Using fallback responses.")
+# --- 2. DATA MODELS (Pydantic) ---
 
-# Data models
-class HistoryItem(BaseModel):
+# Backend version of the Task structure
+class Task(BaseModel):
+    id: int = Field(description="A unique timestamp for the task.")
+    text: str = Field(description="The descriptive text of the task.")
+    completed: bool = Field(description="The completion status of the task.")
+
+class MessageHistory(BaseModel):
     user: str
     ai: str
 
-class Task(BaseModel):
-    id: int
-    text: str
-    completed: bool
+class Context(BaseModel):
+    tasks: List[Task]
+    currentGoal: str
 
 class ChatRequest(BaseModel):
     message: str
     image: Optional[str] = None
-    history: List[HistoryItem] = []
-    context: Optional[Dict] = None
+    history: List[MessageHistory]
+    context: Context
 
-class ChatResponse(BaseModel):
-    response: str
-    tasks: Optional[List[Task]] = None
-    goal: Optional[str] = None
+# 🌟 NEW: Structured Response Schema for Gemini 🌟
+class AIResponse(BaseModel):
+    """The required JSON structure for the AI's response."""
+    response_text: str = Field(description="The friendly, conversational text response to the user's message.")
+    tasks: List[Task] = Field(description="The complete, updated list of all tasks. Use the existing tasks from the context and add/modify new ones based on the conversation.")
+    goal: str = Field(description="The primary current goal the user is focused on. Extract from the conversation.")
 
-# In-memory storage
-session_data = {
-    "tasks": [],
-    "current_goal": "",
-    "focus_sessions": 0,
-    "streak": 1
-}
+# --- 3. HELPER FUNCTIONS (convert_base64_to_image and convert_history_to_gemini remain the same) ---
+def convert_base64_to_image(base64_string: str) -> Image.Image:
+    # ... (Keep this function as it was)
+    if "," in base64_string:
+        _, base64_string = base64_string.split(",", 1)
+    image_bytes = base64.b64decode(base64_string)
+    return Image.open(BytesIO(image_bytes))
 
-# AI System prompt
-SYSTEM_PROMPT = """You are an AI productivity coach for FocusAI. Your role is to help users:
-
-1. **Beat Procrastination**: Give actionable advice, break tasks into tiny steps
-2. **Stay Focused**: Recommend Pomodoro technique, time-blocking strategies
-3. **Set Goals**: Help create SMART goals and track progress
-4. **Manage Tasks**: Help break down projects into manageable tasks
-5. **Provide Motivation**: Give encouraging, empathetic support
-
-**Your Style**:
-- Be warm, encouraging, and empathetic
-- Use emojis occasionally (not excessively)
-- Keep responses concise but helpful (2-4 paragraphs max)
-- Ask clarifying questions when needed
-- Provide specific, actionable advice
-- Use bullet points for clarity when listing steps
-
-**Task Management**:
-- When users mention tasks, acknowledge them
-- Suggest breaking big projects into smaller tasks
-- Encourage realistic planning
-
-**Remember**: You're a supportive coach, not just an information bot. Show empathy and understanding."""
-
-def call_anthropic_ai(user_message: str, history: List[HistoryItem], context: Dict) -> str:
-    """Call Claude AI for intelligent responses"""
-    try:
-        # Build conversation history
-        messages = []
-        for item in history[-3:]:  # Last 3 exchanges
-            if item.user:
-                messages.append({"role": "user", "content": item.user})
-            if item.ai:
-                messages.append({"role": "assistant", "content": item.ai})
-        
-        # Add context
-        context_str = ""
-        if context.get("currentGoal"):
-            context_str += f"\n[User's Current Goal: {context['currentGoal']}]"
-        if context.get("tasks"):
-            tasks_list = [t['text'] for t in context['tasks'] if not t['completed']]
-            if tasks_list:
-                context_str += f"\n[Active Tasks: {', '.join(tasks_list[:3])}]"
-        
-        # Add current message with context
-        current_msg = user_message
-        if context_str:
-            current_msg += context_str
-        
-        messages.append({"role": "user", "content": current_msg})
-        
-        # Call Claude
-        response = anthropic_client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=500,
-            system=SYSTEM_PROMPT,
-            messages=messages
-        )
-        
-        return response.content[0].text
+def convert_history_to_gemini(history: List[MessageHistory]) -> List[types.Content]:
+    # ... (Keep this function as it was)
+    gemini_history = []
+    system_instruction = (
+        "You are an AI Productivity Coach. Your goal is to help the user set, track, "
+        "and complete tasks and goals. Your entire response MUST be a valid JSON object "
+        "that adheres strictly to the AIResponse schema, including the 'response_text', 'tasks', and 'goal' fields. "
+        "Analyze the user's request and update the provided 'tasks' and 'goal' if necessary, then return the complete list."
+    )
+    gemini_history.append(types.Content(role="system", parts=[types.Part.from_text(system_instruction)]))
     
-    except Exception as e:
-        print(f"AI Error: {e}")
-        return fallback_response(user_message)
+    for msg in history:
+        if msg.user:
+            gemini_history.append(types.Content(role="user", parts=[types.Part.from_text(msg.user)]))
+        if msg.ai:
+            gemini_history.append(types.Content(role="model", parts=[types.Part.from_text(msg.ai)]))
+            
+    return gemini_history
 
-def fallback_response(user_message: str) -> str:
-    """Smart fallback responses when AI is unavailable"""
-    lower = user_message.lower()
-    
-    responses = {
-        "procrastination": "I understand procrastination is tough! 💪\n\n**Try the 2-Minute Rule**: If a task takes less than 2 minutes, do it now. For bigger tasks, commit to just 5 minutes - momentum builds naturally!\n\n**What's the smallest step** you can take right now?",
-        
-        "focus": "Let's boost your focus! 🎯\n\n**Pomodoro Technique**:\n• 25 minutes focused work\n• 5 minute break\n• Repeat 4 times, then longer break\n\n**Remove distractions**: Phone away, close extra tabs, tell others you're in focus mode.\n\nWhat will you focus on first?",
-        
-        "motivation": "Motivation comes and goes - discipline stays! 💪\n\n**Remember**: You don't need to feel motivated to start. Action creates motivation, not the other way around.\n\n**Start tiny**: Just 5 minutes. That's all. Future you will thank you!\n\nWhat's one small action you can take right now?",
-        
-        "goal": "Let's set a powerful goal! 🎯\n\n**SMART Framework**:\n• **Specific**: What exactly?\n• **Measurable**: How to track?\n• **Achievable**: Is it realistic?\n• **Relevant**: Why does it matter?\n• **Time-bound**: When's the deadline?\n\nTell me your goal, and I'll help make it concrete!",
-        
-        "schedule": "Smart planning = better performance! 📅\n\n**Time-Blocking Strategy**:\n1. List top 3 priorities\n2. Assign specific time blocks\n3. Include buffer time\n4. Schedule breaks (not optional!)\n\n**Pro tip**: Do hardest tasks when your energy is highest.\n\nWhat are your top 3 priorities today?",
-        
-        "project": "Let's break this down! 🔍\n\n**Project Breakdown Method**:\n1. **End Goal**: What's the final result?\n2. **Milestones**: What are 3-5 major steps?\n3. **Action Items**: Break each into tasks\n4. **Timeline**: Assign deadlines\n5. **Next Action**: What's the very first step?\n\nTell me about your project!",
-        
-        "deadline": "Deadline pressure? Let's strategize! ⏰\n\n**Reverse Planning**:\n1. Deadline date?\n2. Available time?\n3. Must-do tasks?\n4. What can be simplified?\n5. Add buffer (things take longer!)\n\n**Emergency Mode**: Cut non-essentials, work in sprints, ask for help if needed.\n\nWhen's your deadline?",
-    }
-    
-    # Match keywords
-    for keyword, response in responses.items():
-        if keyword in lower:
-            return response
-    
-    # Default response
-    return "I'm here to help you stay productive! 🚀\n\n**I can help with**:\n• Breaking down projects\n• Fighting procrastination\n• Creating schedules\n• Setting goals\n• Starting focus sessions\n• Managing tasks\n\nWhat's on your mind today?"
 
-@app.get("/")
-async def root():
-    return {
-        "message": "FocusAI Productivity Coach API",
-        "version": "2.0.0",
-        "ai_enabled": AI_ENABLED,
-        "status": "online"
-    }
+# --- 4. API ENDPOINTS ---
 
 @app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "ai_enabled": AI_ENABLED,
-        "timestamp": datetime.now().isoformat()
-    }
+def health_check():
+    # ... (Health check remains the same)
+    if client is None:
+        raise HTTPException(status_code=500, detail="Gemini client not initialized. Check API Key.")
+    return {"status": "ok", "message": "AI Coach Backend is Online"}
 
-@app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """Main chat endpoint with AI integration"""
-    
-    user_message = request.message.lower()
-    response_text = ""
-    updated_tasks = None
-    updated_goal = None
-    
-    # Extract context
-    context = request.context or {}
-    if context:
-        session_data["tasks"] = context.get("tasks", [])
-        session_data["current_goal"] = context.get("currentGoal", "")
-    
-    # Task management commands
-    if "add task" in user_message:
-        task_text = user_message.split("add task")[-1].strip(": ")
-        if task_text:
-            new_task = {
-                "id": int(datetime.now().timestamp() * 1000),
-                "text": task_text,
-                "completed": False
-            }
-            session_data["tasks"].append(new_task)
-            updated_tasks = session_data["tasks"]
-            response_text = f"✅ Added: '{task_text}'\n\nGreat! Let's tackle this. What's your plan of action?"
-    
-    elif "set goal" in user_message or "my goal is" in user_message:
-        if "set goal" in user_message:
-            goal_text = user_message.split("set goal")[-1].strip(": ")
-        else:
-            goal_text = user_message.split("my goal is")[-1].strip()
+@app.post("/api/chat")
+async def chat_handler(request_data: ChatRequest):
+    if client is None:
+        raise HTTPException(status_code=500, detail="Gemini client not initialized.")
         
-        if goal_text:
-            session_data["current_goal"] = goal_text
-            updated_goal = goal_text
-            response_text = f"🎯 Goal set: '{goal_text}'\n\nAwesome! Let's break this into actionable steps. What's the first thing you need to do?"
-    
-    else:
-        # Use AI if available, otherwise fallback
-        if AI_ENABLED:
-            response_text = call_anthropic_ai(
-                request.message, 
-                request.history,
-                context
-            )
-        else:
-            response_text = fallback_response(request.message)
-    
-    return ChatResponse(
-        response=response_text,
-        tasks=updated_tasks,
-        goal=updated_goal
-    )
+    try:
+        # Prepare the current prompt parts
+        prompt_parts = []
+        
+        # 🌟 Crucial: Pass current tasks and goal as context to the model 🌟
+        context_prompt = (
+            f"User's current message: {request_data.message}\n"
+            f"Current Goal: {request_data.context.currentGoal}\n"
+            f"Current Tasks (JSON array): {json.dumps([t.dict() for t in request_data.context.tasks])}\n\n"
+            "Based on the full context above, generate the JSON output following the AIResponse schema."
+        )
+        prompt_parts.append(context_prompt)
+        
+        if request_data.image:
+            image_part = convert_base64_to_image(request_data.image)
+            prompt_parts.append(image_part)
+        
+        # Convert history and combine with current user prompt
+        gemini_history = convert_history_to_gemini(request_data.history)
+        full_contents = gemini_history + [types.Content(role="user", parts=prompt_parts)]
 
-@app.get("/api/tasks")
-async def get_tasks():
-    return {"tasks": session_data["tasks"]}
+        # 🌟 Call the Gemini API with Structured Output parameters 🌟
+        response = client.models.generate_content(
+            model="gemini-2.5-flash", 
+            contents=full_contents,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=AIResponse, # Passes the Pydantic schema
+            ),
+        )
 
-@app.post("/api/tasks")
-async def create_task(task: Task):
-    session_data["tasks"].append(task.dict())
-    return {"message": "Task created", "task": task}
+        # 5. Process Response
+        
+        # The response.text is guaranteed to be a valid JSON string matching AIResponse
+        response_json = json.loads(response.text)
+        
+        # Return the structured data directly
+        return {
+            "response": response_json['response_text'],
+            "tasks": response_json['tasks'],
+            "goal": response_json['goal']
+        }
 
-@app.put("/api/tasks/{task_id}")
-async def update_task(task_id: int, task: Task):
-    for i, t in enumerate(session_data["tasks"]):
-        if t["id"] == task_id:
-            session_data["tasks"][i] = task.dict()
-            return {"message": "Task updated", "task": task}
-    raise HTTPException(status_code=404, detail="Task not found")
+    except Exception as e:
+        print(f"Gemini API Error: {e}")
+        # In case of API failure or JSON parsing issue, return a fallback message
+        fallback_tasks = [t.dict() for t in request_data.context.tasks]
+        
+        return {
+            "response": f"Sorry, a structured response error occurred: {str(e)}",
+            "tasks": fallback_tasks,
+            "goal": request_data.context.currentGoal
+        }
 
-@app.delete("/api/tasks/{task_id}")
-async def delete_task(task_id: int):
-    session_data["tasks"] = [t for t in session_data["tasks"] if t["id"] != task_id]
-    return {"message": "Task deleted"}
-
-@app.get("/api/stats")
-async def get_stats():
-    completed_tasks = len([t for t in session_data["tasks"] if t["completed"]])
-    total_tasks = len(session_data["tasks"])
-    
-    return {
-        "completed_tasks": completed_tasks,
-        "total_tasks": total_tasks,
-        "focus_sessions": session_data["focus_sessions"],
-        "streak": session_data["streak"],
-        "current_goal": session_data["current_goal"]
-    }
-
-@app.post("/api/focus-session/start")
-async def start_focus_session():
-    session_data["focus_sessions"] += 1
-    return {
-        "message": "Focus session started! 🎯",
-        "duration": 25,
-        "total_sessions": session_data["focus_sessions"]
-    }
-
-if __name__ == "__main__":
-    print("🚀 Starting FocusAI Backend Server...")
-    print("📍 API: http://localhost:8000")
-    print("📚 Docs: http://localhost:8000/docs")
-    if AI_ENABLED:
-        print("🤖 AI: Claude 3.5 Sonnet (Enabled)")
-    else:
-        print("⚠️  AI: Using fallback responses (Set ANTHROPIC_API_KEY)")
-    print("\n" + "="*50)
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+# --- 5. RUN SERVER COMMAND ---
+# Run this command in your terminal:
+# uvicorn main:app --reload --port 8000

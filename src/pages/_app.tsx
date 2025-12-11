@@ -71,7 +71,7 @@ export default function MyApp({
     }
   };
 
-  const showHeader = router.pathname !== '/404' && router.pathname !== '/valentine';
+  const showHeader = router.pathname !== '/404' && router.pathname !== '/valentine' && !router.pathname.startsWith('/chat');
 
   return (
     <SessionProvider session={session}>
